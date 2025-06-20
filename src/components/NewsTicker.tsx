@@ -51,8 +51,8 @@ const NewsTicker = () => {
 
     fetchRSSFeed();
     
-    // Refresh RSS feed every 5 minutes
-    const refreshInterval = setInterval(fetchRSSFeed, 5 * 60 * 1000);
+    // Refresh RSS feed every 1 minute
+    const refreshInterval = setInterval(fetchRSSFeed, 1 * 60 * 1000);
     
     return () => clearInterval(refreshInterval);
   }, []);
