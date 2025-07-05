@@ -14,28 +14,44 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
       description: "Premium streaming service",
       size: "45.2 MB",
       category: "Main",
-      iconUrl: "/icons/dreamstreams.png", // You can upload this
+      iconUrl: "/icons/dreamstreams.png",
       isInstalled: true
     },
     {
-      name: "Vibez TV",
+      name: "VibezTV",
       description: "Live TV streaming",
       size: "38.6 MB", 
       category: "Main",
-      iconUrl: "/icons/vibeztv.png", // You can upload this
+      iconUrl: "/icons/vibeztv.png",
       isInstalled: false
-    }
-  ];
-
-  const otherApps = [
+    },
+    {
+      name: "Plex",
+      description: "Media streaming platform",
+      size: "52.3 MB",
+      category: "Main",
+      iconUrl: "/icons/plex.png",
+      isInstalled: true
+    },
     {
       name: "Cinema HD",
       description: "Premium streaming application",
       size: "25.6 MB",
-      category: "Streaming",
+      category: "Main",
       iconUrl: "/icons/cinemahd.png",
       isInstalled: false
     },
+    {
+      name: "IPVanish",
+      description: "VPN security & privacy",
+      size: "18.9 MB",
+      category: "Main",
+      iconUrl: "/icons/ipvanish.png",
+      isInstalled: true
+    }
+  ];
+
+  const otherApps = [
     {
       name: "Stremio", 
       description: "Media center for video content",
