@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Upload, Trash2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useMediaAssets, MediaAsset } from '@/hooks/useMediaAssets';
@@ -29,6 +29,8 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log('Attempting to upload file:', file.name, 'Type:', file.type, 'Size:', file.size);
+
     try {
       setUploading(true);
       await uploadAsset(file, uploadForm.assetType, uploadForm.section, uploadForm.description);
@@ -42,9 +44,10 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
       setUploadForm({ assetType: 'background', section: 'home', description: '' });
       event.target.value = '';
     } catch (error) {
+      console.error('Upload error details:', error);
       toast({
         title: "Upload failed",
-        description: "Failed to upload file. Please try again.",
+        description: `Failed to upload ${file.name}. Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -173,7 +176,7 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
           <div className="flex items-center gap-4">
             <Input
               type="file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.gif,.svg,.webp,.bmp,.tiff"
               onChange={handleFileUpload}
               disabled={uploading}
               className="bg-white/10 border-white/20 text-white file:bg-blue-600 file:text-white file:border-0 file:rounded file:px-4 file:py-2"
