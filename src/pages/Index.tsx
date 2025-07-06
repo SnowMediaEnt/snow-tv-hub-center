@@ -2,19 +2,28 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, Store, Video, MessageCircle, Settings } from 'lucide-react';
+import { Package, Store, Video, MessageCircle, Settings as SettingsIcon } from 'lucide-react';
 import NewsTicker from '@/components/NewsTicker';
 import InstallApps from '@/components/InstallApps';
 import MediaStore from '@/components/MediaStore';
 import SupportVideos from '@/components/SupportVideos';
 import ChatCommunity from '@/components/ChatCommunity';
-import MediaManager from '@/components/MediaManager';
+import Settings from '@/components/Settings';
 import { useDynamicBackground } from '@/hooks/useDynamicBackground';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [focusedButton, setFocusedButton] = useState(0);
+  const [layoutMode, setLayoutMode] = useState<'grid' | 'row'>(() => {
+    const saved = localStorage.getItem('snow-media-layout');
+    return (saved as 'grid' | 'row') || 'grid';
+  });
   const { backgroundUrl, hasBackground } = useDynamicBackground('home');
+
+  const handleLayoutChange = (newMode: 'grid' | 'row') => {
+    setLayoutMode(newMode);
+    localStorage.setItem('snow-media-layout', newMode);
+  };
 
   // Handle keyboard navigation for TV remote
   useEffect(() => {
@@ -24,19 +33,31 @@ const Index = () => {
       switch (event.key) {
         case 'ArrowRight':
           event.preventDefault();
-          setFocusedButton((prev) => prev === 1 ? 3 : prev === 0 ? 1 : prev);
+          if (layoutMode === 'grid') {
+            setFocusedButton((prev) => prev === 1 ? 3 : prev === 0 ? 1 : prev);
+          } else {
+            setFocusedButton((prev) => (prev + 1) % 4);
+          }
           break;
         case 'ArrowLeft':
           event.preventDefault();
-          setFocusedButton((prev) => prev === 0 ? 1 : prev === 3 ? 1 : prev === 1 ? 0 : 2);
+          if (layoutMode === 'grid') {
+            setFocusedButton((prev) => prev === 0 ? 1 : prev === 3 ? 1 : prev === 1 ? 0 : 2);
+          } else {
+            setFocusedButton((prev) => (prev - 1 + 4) % 4);
+          }
           break;
         case 'ArrowDown':
           event.preventDefault();
-          setFocusedButton((prev) => prev < 2 ? prev + 2 : prev);
+          if (layoutMode === 'grid') {
+            setFocusedButton((prev) => prev < 2 ? prev + 2 : prev);
+          }
           break;
         case 'ArrowUp':
           event.preventDefault();
-          setFocusedButton((prev) => prev >= 2 ? prev - 2 : prev);
+          if (layoutMode === 'grid') {
+            setFocusedButton((prev) => prev >= 2 ? prev - 2 : prev);
+          }
           break;
         case 'Enter':
         case ' ':
@@ -53,7 +74,7 @@ const Index = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSection, focusedButton]);
+  }, [activeSection, focusedButton, layoutMode]);
 
   const handleButtonClick = (index: number) => {
     const sections = ['install-apps', 'media-store', 'support-videos', 'chat-community'];
@@ -94,7 +115,13 @@ const Index = () => {
         {activeSection === 'media-store' && <MediaStore onBack={() => setActiveSection(null)} />}
         {activeSection === 'support-videos' && <SupportVideos onBack={() => setActiveSection(null)} />}
         {activeSection === 'chat-community' && <ChatCommunity onBack={() => setActiveSection(null)} />}
-        {activeSection === 'media-manager' && <MediaManager onBack={() => setActiveSection(null)} />}
+        {activeSection === 'settings' && (
+          <Settings 
+            onBack={() => setActiveSection(null)} 
+            layoutMode={layoutMode}
+            onLayoutChange={handleLayoutChange}
+          />
+        )}
       </div>
     );
   }
@@ -123,13 +150,13 @@ const Index = () => {
       {/* Settings Button */}
       <div className="absolute top-4 right-4 z-20">
         <Button
-          onClick={() => setActiveSection('media-manager')}
+          onClick={() => setActiveSection('settings')}
           variant="outline"
           size="sm"
           className="bg-white/10 border-white/20 text-white hover:bg-white/20"
         >
-          <Settings className="w-4 h-4 mr-2" />
-          Media Settings
+          <SettingsIcon className="w-4 h-4 mr-2" />
+          Settings
         </Button>
       </div>
 
@@ -139,16 +166,18 @@ const Index = () => {
           <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
             SNOW MEDIA CENTER
           </h1>
-          <p className="text-xl text-blue-200">TV Optimized Entertainment Hub</p>
+          {layoutMode === 'grid' && (
+            <p className="text-xl text-blue-200">TV Optimized Entertainment Hub</p>
+          )}
         </div>
       </div>
 
       {/* News Ticker */}
       <NewsTicker />
 
-      {/* Main Grid */}
+      {/* Main Content */}
       <div className="relative z-10 px-16 py-8">
-        <div className="grid grid-cols-2 gap-8 max-w-6xl mx-auto">
+        <div className={layoutMode === 'grid' ? 'grid grid-cols-2 gap-8 max-w-6xl mx-auto' : 'flex gap-6 justify-center max-w-5xl mx-auto'}>
           {buttons.map((button, index) => {
             const Icon = button.icon;
             const isFocused = focusedButton === index;
@@ -162,24 +191,27 @@ const Index = () => {
                     ? 'scale-105 ring-4 ring-blue-400 shadow-2xl shadow-blue-500/25' 
                     : 'hover:scale-102 shadow-lg'
                   }
-                  bg-gradient-to-br ${button.color} border-0 h-48
+                  bg-gradient-to-br ${button.color} border-0 
+                  ${layoutMode === 'grid' ? 'h-48' : 'h-32 w-48'}
                 `}
                 onClick={() => handleButtonClick(index)}
               >
                 <div className="absolute inset-0 bg-black/20" />
-                <div className="relative z-10 p-8 h-full flex flex-col items-center justify-center text-center">
+                <div className="relative z-10 p-4 h-full flex flex-col items-center justify-center text-center">
                   <Icon 
-                    size={64} 
-                    className={`mb-4 transition-all duration-300 ${
+                    size={layoutMode === 'grid' ? 64 : 48} 
+                    className={`${layoutMode === 'grid' ? 'mb-4' : 'mb-2'} transition-all duration-300 ${
                       isFocused ? 'text-white scale-110' : 'text-white/90'
                     }`} 
                   />
-                  <h3 className="text-2xl font-bold mb-2 text-white">
+                  <h3 className={`${layoutMode === 'grid' ? 'text-2xl' : 'text-lg'} font-bold mb-1 text-white`}>
                     {button.title}
                   </h3>
-                  <p className="text-lg text-white/80">
-                    {button.description}
-                  </p>
+                  {layoutMode === 'grid' && (
+                    <p className="text-lg text-white/80">
+                      {button.description}
+                    </p>
+                  )}
                 </div>
                 
                 {/* Focus indicator */}
