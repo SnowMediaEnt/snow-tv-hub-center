@@ -51,6 +51,48 @@ export type Database = {
         }
         Relationships: []
       }
+      media_assets: {
+        Row: {
+          asset_type: Database["public"]["Enums"]["asset_type"]
+          created_at: string
+          description: string | null
+          file_path: string
+          id: string
+          is_active: boolean
+          name: string
+          rotation_order: number | null
+          section: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          asset_type?: Database["public"]["Enums"]["asset_type"]
+          created_at?: string
+          description?: string | null
+          file_path: string
+          id?: string
+          is_active?: boolean
+          name: string
+          rotation_order?: number | null
+          section?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          asset_type?: Database["public"]["Enums"]["asset_type"]
+          created_at?: string
+          description?: string | null
+          file_path?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          rotation_order?: number | null
+          section?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -59,7 +101,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      asset_type: "background" | "icon" | "logo" | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -174,6 +216,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      asset_type: ["background", "icon", "logo", "other"],
+    },
   },
 } as const

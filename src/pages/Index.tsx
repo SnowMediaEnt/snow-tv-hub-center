@@ -2,16 +2,19 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, Store, Video, MessageCircle } from 'lucide-react';
+import { Package, Store, Video, MessageCircle, Settings } from 'lucide-react';
 import NewsTicker from '@/components/NewsTicker';
 import InstallApps from '@/components/InstallApps';
 import MediaStore from '@/components/MediaStore';
 import SupportVideos from '@/components/SupportVideos';
 import ChatCommunity from '@/components/ChatCommunity';
+import MediaManager from '@/components/MediaManager';
+import { useDynamicBackground } from '@/hooks/useDynamicBackground';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [focusedButton, setFocusedButton] = useState(0);
+  const { backgroundUrl, hasBackground } = useDynamicBackground('home');
 
   // Handle keyboard navigation for TV remote
   useEffect(() => {
@@ -91,16 +94,43 @@ const Index = () => {
         {activeSection === 'media-store' && <MediaStore onBack={() => setActiveSection(null)} />}
         {activeSection === 'support-videos' && <SupportVideos onBack={() => setActiveSection(null)} />}
         {activeSection === 'chat-community' && <ChatCommunity onBack={() => setActiveSection(null)} />}
+        {activeSection === 'media-manager' && <MediaManager onBack={() => setActiveSection(null)} />}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.1),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(56,189,248,0.05)_25%,rgba(56,189,248,0.05)_50%,transparent_50%,transparent_75%,rgba(56,189,248,0.05)_75%)] bg-[length:60px_60px]" />
+    <div 
+      className="min-h-screen text-white overflow-hidden relative"
+      style={hasBackground ? {
+        backgroundImage: `url(${backgroundUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      } : {}}
+    >
+      {/* Background Overlay - darker when custom background is used */}
+      <div className={`absolute inset-0 ${hasBackground ? 'bg-black/60' : 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900'}`} />
+      
+      {/* Background Pattern - only show when no custom background */}
+      {!hasBackground && (
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.1),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(56,189,248,0.05)_25%,rgba(56,189,248,0.05)_50%,transparent_50%,transparent_75%,rgba(56,189,248,0.05)_75%)] bg-[length:60px_60px]" />
+        </div>
+      )}
+
+      {/* Settings Button */}
+      <div className="absolute top-4 right-4 z-20">
+        <Button
+          onClick={() => setActiveSection('media-manager')}
+          variant="outline"
+          size="sm"
+          className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+        >
+          <Settings className="w-4 h-4 mr-2" />
+          Media Settings
+        </Button>
       </div>
 
       {/* Header */}
