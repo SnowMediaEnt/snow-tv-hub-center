@@ -19,6 +19,10 @@ interface VimeoVideo {
   };
   player_embed_url: string;
   created_time: string;
+  tags: Array<{
+    name: string;
+    canonical: string;
+  }>;
 }
 
 interface VimeoResponse {
@@ -57,8 +61,8 @@ Deno.serve(async (req) => {
 
     console.log('Fetching videos from Vimeo API...');
 
-    // Fetch videos from Vimeo API
-    const vimeoResponse = await fetch('https://api.vimeo.com/me/videos?per_page=10&sort=date', {
+    // Fetch videos from Vimeo API with tags
+    const vimeoResponse = await fetch('https://api.vimeo.com/me/videos?per_page=10&sort=date&fields=uri,name,description,duration,pictures,player_embed_url,created_time,tags', {
       headers: {
         'Authorization': `Bearer ${vimeoToken}`,
         'Accept': 'application/vnd.vimeo.*+json;version=3.4',
@@ -107,6 +111,7 @@ Deno.serve(async (req) => {
         thumbnail: thumbnail,
         embed_url: video.player_embed_url,
         created_at: video.created_time,
+        tags: video.tags?.map(tag => tag.name) || [],
       };
     });
 

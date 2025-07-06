@@ -9,6 +9,7 @@ export interface VimeoVideo {
   thumbnail: string;
   embed_url: string;
   created_at: string;
+  tags: string[];
 }
 
 export const useVimeoVideos = () => {

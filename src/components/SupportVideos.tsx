@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Play, ArrowLeft, Clock, Loader2, AlertCircle } from 'lucide-react';
 import { useVimeoVideos } from '@/hooks/useVimeoVideos';
 
@@ -21,6 +22,78 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
   const handleCloseVideo = () => {
     setSelectedVideo(null);
   };
+
+  // Categorize videos based on tags
+  const deviceTags = ['x96', 'firetv', 'older'];
+  const serviceTags = ['dreamstreams', 'vibez tv', 'vibeztv', 'plex', 'support'];
+
+  const categorizeVideos = () => {
+    const deviceVideos = videos.filter(video => 
+      video.tags.some(tag => deviceTags.includes(tag.toLowerCase()))
+    );
+    const serviceVideos = videos.filter(video => 
+      video.tags.some(tag => serviceTags.includes(tag.toLowerCase()))
+    );
+    const otherVideos = videos.filter(video => 
+      !video.tags.some(tag => 
+        [...deviceTags, ...serviceTags].includes(tag.toLowerCase())
+      )
+    );
+    
+    return { deviceVideos, serviceVideos, otherVideos };
+  };
+
+  const { deviceVideos, serviceVideos, otherVideos } = categorizeVideos();
+
+  const renderVideoGrid = (videoList: typeof videos) => (
+    <div className="grid grid-cols-2 gap-6">
+      {videoList.map((video) => (
+        <Card key={video.id} className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 overflow-hidden hover:scale-105 transition-all duration-300">
+          <div className="relative">
+            <img 
+              src={video.thumbnail} 
+              alt={video.title}
+              className="w-full h-48 object-cover"
+            />
+            <div 
+              className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+              onClick={() => handleVideoClick(video.embed_url)}
+            >
+              <div className="bg-green-600 rounded-full p-4">
+                <Play className="w-8 h-8 text-white fill-current" />
+              </div>
+            </div>
+            <div className="absolute bottom-2 right-2 bg-black/75 text-white px-2 py-1 rounded text-sm flex items-center">
+              <Clock className="w-3 h-3 mr-1" />
+              {video.duration}
+            </div>
+            {video.tags.length > 0 && (
+              <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+                {video.tags.slice(0, 2).map((tag, index) => (
+                  <span key={index} className="bg-blue-600/80 text-white text-xs px-2 py-1 rounded">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="p-6">
+            <h3 className="text-xl font-bold text-white mb-2">{video.title}</h3>
+            <p className="text-slate-300 mb-4 line-clamp-2">{video.description}</p>
+            
+            <Button 
+              onClick={() => handleVideoClick(video.embed_url)}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Play className="w-4 h-4 mr-2" />
+              Watch Video
+            </Button>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
 
   if (loading) {
     return (
@@ -72,44 +145,49 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
             <p className="text-xl text-slate-400">No videos found. Upload some videos to your Vimeo account to see them here.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-6">
-            {videos.map((video) => (
-              <Card key={video.id} className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 overflow-hidden hover:scale-105 transition-all duration-300">
-                <div className="relative">
-                  <img 
-                    src={video.thumbnail} 
-                    alt={video.title}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div 
-                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
-                    onClick={() => handleVideoClick(video.embed_url)}
-                  >
-                    <div className="bg-green-600 rounded-full p-4">
-                      <Play className="w-8 h-8 text-white fill-current" />
-                    </div>
-                  </div>
-                  <div className="absolute bottom-2 right-2 bg-black/75 text-white px-2 py-1 rounded text-sm flex items-center">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {video.duration}
-                  </div>
+          <Tabs defaultValue="device" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-8 bg-slate-800">
+              <TabsTrigger value="device" className="text-white data-[state=active]:bg-blue-600">
+                Device ({deviceVideos.length})
+              </TabsTrigger>
+              <TabsTrigger value="service" className="text-white data-[state=active]:bg-blue-600">
+                Service ({serviceVideos.length})
+              </TabsTrigger>
+              <TabsTrigger value="other" className="text-white data-[state=active]:bg-blue-600">
+                Other ({otherVideos.length})
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="device" className="mt-0">
+              {deviceVideos.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-xl text-slate-400">No device videos found. Tag your videos with: x96, FireTV, or Older</p>
                 </div>
-                
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-white mb-2">{video.title}</h3>
-                  <p className="text-slate-300 mb-4 line-clamp-2">{video.description}</p>
-                  
-                  <Button 
-                    onClick={() => handleVideoClick(video.embed_url)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Watch Video
-                  </Button>
+              ) : (
+                renderVideoGrid(deviceVideos)
+              )}
+            </TabsContent>
+            
+            <TabsContent value="service" className="mt-0">
+              {serviceVideos.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-xl text-slate-400">No service videos found. Tag your videos with: Dreamstreams, Vibez TV, Plex, or Support</p>
                 </div>
-              </Card>
-            ))}
-          </div>
+              ) : (
+                renderVideoGrid(serviceVideos)
+              )}
+            </TabsContent>
+            
+            <TabsContent value="other" className="mt-0">
+              {otherVideos.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-xl text-slate-400">No uncategorized videos found.</p>
+                </div>
+              ) : (
+                renderVideoGrid(otherVideos)
+              )}
+            </TabsContent>
+          </Tabs>
         )}
 
         {/* Video Player Dialog */}
