@@ -55,38 +55,44 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
             <Card className="bg-gradient-to-br from-blue-600 to-blue-800 border-blue-500 p-6">
               <h2 className="text-2xl font-bold text-white mb-6">Home Screen Layout</h2>
               
-              <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-white/10 rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <Grid2X2 className="w-8 h-8 text-blue-200" />
-                    <div>
-                      <Label className="text-lg font-semibold text-white">Grid Layout (2x2)</Label>
-                      <p className="text-blue-200 text-sm">Traditional grid view with 4 main sections</p>
+              <div className="flex items-center justify-center">
+                <div 
+                  className="flex bg-slate-800 rounded-lg p-2 cursor-pointer transition-all duration-200 hover:bg-slate-700"
+                  onClick={() => onLayoutChange(layoutMode === 'grid' ? 'row' : 'grid')}
+                >
+                  {/* Grid Layout Option */}
+                  <div className={`flex flex-col items-center justify-center p-4 rounded-md transition-all duration-200 ${
+                    layoutMode === 'grid' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                  }`}>
+                    <div className="grid grid-cols-2 gap-1 mb-2">
+                      <div className="w-3 h-3 bg-current rounded-sm opacity-80"></div>
+                      <div className="w-3 h-3 bg-current rounded-sm opacity-80"></div>
+                      <div className="w-3 h-3 bg-current rounded-sm opacity-80"></div>
+                      <div className="w-3 h-3 bg-current rounded-sm opacity-80"></div>
                     </div>
+                    <span className="text-xs font-medium">Grid</span>
                   </div>
-                  <Switch
-                    checked={layoutMode === 'grid'}
-                    onCheckedChange={(checked) => onLayoutChange(checked ? 'grid' : 'row')}
-                  />
-                </div>
 
-                <div className="flex items-center justify-between p-4 bg-white/10 rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <RectangleHorizontal className="w-8 h-8 text-blue-200" />
-                    <div>
-                      <Label className="text-lg font-semibold text-white">Row Layout</Label>
-                      <p className="text-blue-200 text-sm">Single horizontal row - shows more background</p>
+                  {/* Divider */}
+                  <div className="w-px bg-slate-600 mx-2 my-2"></div>
+
+                  {/* Row Layout Option */}
+                  <div className={`flex flex-col items-center justify-center p-4 rounded-md transition-all duration-200 ${
+                    layoutMode === 'row' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                  }`}>
+                    <div className="flex gap-1 mb-2">
+                      <div className="w-3 h-3 bg-current rounded-sm opacity-80"></div>
+                      <div className="w-3 h-3 bg-current rounded-sm opacity-80"></div>
+                      <div className="w-3 h-3 bg-current rounded-sm opacity-80"></div>
+                      <div className="w-3 h-3 bg-current rounded-sm opacity-80"></div>
                     </div>
+                    <span className="text-xs font-medium">Row</span>
                   </div>
-                  <Switch
-                    checked={layoutMode === 'row'}
-                    onCheckedChange={(checked) => onLayoutChange(checked ? 'row' : 'grid')}
-                  />
                 </div>
               </div>
 
               <div className="mt-8 p-4 bg-blue-900/50 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-2">Layout Preview</h3>
+                <h3 className="text-lg font-semibold text-white mb-2">Current Layout</h3>
                 <div className="bg-slate-800 p-4 rounded-lg">
                   {layoutMode === 'grid' ? (
                     <div className="grid grid-cols-2 gap-2">
@@ -104,6 +110,12 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
                     </div>
                   )}
                 </div>
+                <p className="text-blue-200 text-sm mt-2">
+                  {layoutMode === 'grid' 
+                    ? 'Grid layout shows all details and descriptions'
+                    : 'Row layout maximizes background visibility'
+                  }
+                </p>
               </div>
             </Card>
           </TabsContent>
