@@ -100,34 +100,28 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
         {/* Main Apps Row */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-white mb-6">Featured Apps</h2>
-          <div className="flex gap-6 justify-center">
+          <div className="grid grid-cols-5 gap-4 max-w-6xl mx-auto">
             {mainApps.map((app, index) => (
-              <Card key={index} className="bg-gradient-to-br from-blue-600 to-blue-800 border-blue-500 p-6 hover:scale-105 transition-all duration-300 w-80">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center">
-                    <div className="bg-white p-3 rounded-lg mr-4">
-                      <img src={app.iconUrl} alt={app.name} className="w-8 h-8" onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                      }} />
-                      <Package className="w-8 h-8 text-blue-600 hidden" />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-white">{app.name}</h3>
-                      <p className="text-blue-200">{app.category}</p>
-                    </div>
+              <Card key={index} className="bg-gradient-to-br from-blue-600 to-blue-800 border-blue-500 p-4 hover:scale-105 transition-all duration-300">
+                <div className="text-center">
+                  <div className="bg-white p-2 rounded-lg mx-auto mb-3 w-fit">
+                    <img src={app.iconUrl} alt={app.name} className="w-12 h-12" onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                    }} />
+                    <Package className="w-12 h-12 text-blue-600 hidden" />
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-sm ${app.isInstalled ? 'bg-green-600 text-white' : 'bg-yellow-600 text-white'}`}>
+                  <h3 className="text-lg font-bold text-white mb-1">{app.name}</h3>
+                  <span className={`px-2 py-1 rounded-full text-xs ${app.isInstalled ? 'bg-green-600 text-white' : 'bg-yellow-600 text-white'} mb-3 inline-block`}>
                     {app.isInstalled ? 'Installed' : app.size}
                   </span>
+                  <p className="text-blue-100 text-sm mb-4">{app.description}</p>
+                  
+                  <Button className={`w-full text-sm py-2 ${app.isInstalled ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>
+                    <Download className="w-4 h-4 mr-1" />
+                    {app.isInstalled ? 'Launch' : 'Install'}
+                  </Button>
                 </div>
-                
-                <p className="text-blue-100 mb-6">{app.description}</p>
-                
-                <Button className={`w-full text-lg py-3 ${app.isInstalled ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>
-                  <Download className="w-5 h-5 mr-2" />
-                  {app.isInstalled ? 'Launch App' : 'Install APK'}
-                </Button>
               </Card>
             ))}
           </div>
