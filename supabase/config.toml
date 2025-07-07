@@ -1,1 +1,4 @@
 project_id = "falmwzhvxoefvkfsiylp"
+
+[functions.wix-integration]
+verify_jwt = false
