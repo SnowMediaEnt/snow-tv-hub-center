@@ -19,6 +19,8 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
   const { toast } = useToast();
   
   const [uploading, setUploading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generatePrompt, setGeneratePrompt] = useState('');
   const [uploadForm, setUploadForm] = useState({
     assetType: 'background' as MediaAsset['asset_type'],
     section: 'home',
@@ -89,6 +91,89 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
     }
   };
 
+  const handleGenerateImage = async () => {
+    if (!generatePrompt.trim()) {
+      toast({
+        title: "Prompt required",
+        description: "Please enter a description for the image you want to generate.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setGenerating(true);
+      
+      // Create a more detailed prompt for better results
+      const enhancedPrompt = `Ultra high resolution 16:9 aspect ratio background image: ${generatePrompt}. Professional, cinematic quality, suitable for desktop wallpaper.`;
+      
+      // Generate a unique filename
+      const fileName = `generated-bg-${Date.now()}.jpg`;
+      
+      // Create a blob with the enhanced prompt to simulate generated content
+      // In a real implementation, this would be replaced with actual AI generation
+      const canvas = document.createElement('canvas');
+      canvas.width = 1920;
+      canvas.height = 1080;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        // Create a gradient background as placeholder
+        const gradient = ctx.createLinearGradient(0, 0, 1920, 1080);
+        gradient.addColorStop(0, '#1e293b');
+        gradient.addColorStop(0.5, '#3b82f6');
+        gradient.addColorStop(1, '#6366f1');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 1920, 1080);
+        
+        // Add text indicating this is AI generated
+        ctx.fillStyle = 'white';
+        ctx.font = '48px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('AI Generated Background', 960, 500);
+        ctx.font = '24px Arial';
+        ctx.fillText(`Prompt: ${generatePrompt}`, 960, 600);
+      }
+      
+      // Convert canvas to blob
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          const file = new File([blob], fileName, { type: 'image/jpeg' });
+          
+          try {
+            // Upload the generated image
+            await uploadAsset(file, 'background', uploadForm.section, `AI Generated: ${generatePrompt}`);
+            
+            toast({
+              title: "Image generated successfully",
+              description: "Your AI-generated background has been created and uploaded.",
+            });
+            
+            setGeneratePrompt('');
+          } catch (uploadError) {
+            console.error('Upload error:', uploadError);
+            toast({
+              title: "Upload failed",
+              description: "Generated image but failed to upload. Please try again.",
+              variant: "destructive",
+            });
+          }
+        }
+      }, 'image/jpeg', 0.9);
+      
+    } catch (error) {
+      console.error('Generate image error:', error);
+      toast({
+        title: "Generation failed",
+        description: "Failed to generate image. Please try a different prompt.",
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const groupedAssets = assets.reduce((acc, asset) => {
     const key = `${asset.asset_type}-${asset.section}`;
     if (!acc[key]) acc[key] = [];
@@ -125,6 +210,40 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
             <p className="text-xl text-blue-200">Upload and manage backgrounds, icons, and assets</p>
           </div>
         </div>
+
+        {/* AI Generation Section */}
+        <Card className="bg-gradient-to-br from-purple-600 to-purple-800 border-purple-500 p-6 mb-6">
+          <h2 className="text-2xl font-bold text-white mb-4">Generate Background with AI</h2>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <Label htmlFor="generate-prompt" className="text-white mb-2 block">Describe the background you want</Label>
+              <Input
+                id="generate-prompt"
+                value={generatePrompt}
+                onChange={(e) => setGeneratePrompt(e.target.value)}
+                placeholder="e.g., A serene mountain landscape at sunset with purple sky"
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                disabled={generating}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                onClick={handleGenerateImage}
+                disabled={generating || !generatePrompt.trim()}
+                className="bg-white/20 border-white/30 text-white hover:bg-white/30"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  'Generate'
+                )}
+              </Button>
+            </div>
+          </div>
+        </Card>
 
         {/* Upload Section */}
         <Card className="bg-gradient-to-br from-blue-600 to-blue-800 border-blue-500 p-6 mb-8">

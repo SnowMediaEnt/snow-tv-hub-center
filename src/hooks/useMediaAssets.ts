@@ -103,6 +103,19 @@ export const useMediaAssets = () => {
 
   const toggleAssetActive = async (id: string, isActive: boolean) => {
     try {
+      // If activating an asset, first deactivate all other assets of the same type and section
+      if (isActive) {
+        const currentAsset = assets.find(asset => asset.id === id);
+        if (currentAsset) {
+          await supabase
+            .from('media_assets')
+            .update({ is_active: false })
+            .eq('asset_type', currentAsset.asset_type)
+            .eq('section', currentAsset.section)
+            .neq('id', id);
+        }
+      }
+
       const { error: updateError } = await supabase
         .from('media_assets')
         .update({ is_active: isActive })
