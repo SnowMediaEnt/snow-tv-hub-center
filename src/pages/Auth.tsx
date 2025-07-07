@@ -5,10 +5,11 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, User, Mail, Lock, UserPlus } from 'lucide-react';
+import { ArrowLeft, User, Mail, Lock, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -16,6 +17,10 @@ const Auth = () => {
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ 
     email: '', 
@@ -123,6 +128,45 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!loginForm.email) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(loginForm.email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) {
+        toast({
+          title: "Reset failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Reset email sent",
+          description: "Check your email for the password reset link.",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Reset failed",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-8">
       <div className="max-w-md mx-auto">
@@ -170,7 +214,7 @@ const Auth = () => {
                       value={loginForm.email}
                       onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
                       placeholder="Enter your email"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
                       required
                     />
                   </div>
@@ -182,13 +226,20 @@ const Auth = () => {
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-blue-400" />
                     <Input
                       id="login-password"
-                      type="password"
+                      type={showLoginPassword ? "text" : "password"}
                       value={loginForm.password}
                       onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
                       placeholder="Enter your password"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                      className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3 top-3 text-blue-400 hover:text-blue-300"
+                    >
+                      {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -199,6 +250,15 @@ const Auth = () => {
                 >
                   {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
+
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetLoading}
+                  className="w-full text-sm text-blue-300 hover:text-blue-200 mt-2 underline"
+                >
+                  {resetLoading ? 'Sending...' : 'Forgot Password?'}
+                </button>
               </form>
             </TabsContent>
 
@@ -214,7 +274,7 @@ const Auth = () => {
                       value={signupForm.fullName}
                       onChange={(e) => setSignupForm({...signupForm, fullName: e.target.value})}
                       placeholder="Enter your full name"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
                     />
                   </div>
                 </div>
@@ -229,7 +289,7 @@ const Auth = () => {
                       value={signupForm.email}
                       onChange={(e) => setSignupForm({...signupForm, email: e.target.value})}
                       placeholder="Enter your email"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
                       required
                     />
                   </div>
@@ -241,13 +301,20 @@ const Auth = () => {
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-blue-400" />
                     <Input
                       id="signup-password"
-                      type="password"
+                      type={showSignupPassword ? "text" : "password"}
                       value={signupForm.password}
                       onChange={(e) => setSignupForm({...signupForm, password: e.target.value})}
                       placeholder="Create a password"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                      className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
+                      className="absolute right-3 top-3 text-blue-400 hover:text-blue-300"
+                    >
+                      {showSignupPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -257,13 +324,20 @@ const Auth = () => {
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-blue-400" />
                     <Input
                       id="signup-confirm"
-                      type="password"
+                      type={showConfirmPassword ? "text" : "password"}
                       value={signupForm.confirmPassword}
                       onChange={(e) => setSignupForm({...signupForm, confirmPassword: e.target.value})}
                       placeholder="Confirm your password"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                      className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-3 text-blue-400 hover:text-blue-300"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
 

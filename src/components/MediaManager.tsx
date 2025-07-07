@@ -68,6 +68,9 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
         title: currentStatus ? "Asset deactivated" : "Asset activated",
         description: `Asset is now ${!currentStatus ? 'active' : 'inactive'}.`,
       });
+      
+      // Force immediate background refresh by dispatching a custom event
+      window.dispatchEvent(new CustomEvent('backgroundRefresh'));
     } catch (error) {
       toast({
         title: "Failed to update",
