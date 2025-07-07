@@ -5,11 +5,12 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, User, Mail, Lock, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, User, Mail, Lock, UserPlus, Eye, EyeOff, QrCode } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import QRCodeLogin from '@/components/QRCodeLogin';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -191,7 +192,7 @@ const Auth = () => {
 
         <Card className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border-blue-500/50 backdrop-blur-sm">
           <Tabs defaultValue="login" className="w-full p-6">
-            <TabsList className="grid w-full grid-cols-2 bg-blue-800/50 border-blue-600">
+            <TabsList className="grid w-full grid-cols-3 bg-blue-800/50 border-blue-600">
               <TabsTrigger value="login" className="data-[state=active]:bg-blue-600">
                 <User className="w-4 h-4 mr-2" />
                 Sign In
@@ -199,6 +200,10 @@ const Auth = () => {
               <TabsTrigger value="signup" className="data-[state=active]:bg-blue-600">
                 <UserPlus className="w-4 h-4 mr-2" />
                 Sign Up
+              </TabsTrigger>
+              <TabsTrigger value="qr" className="data-[state=active]:bg-blue-600">
+                <QrCode className="w-4 h-4 mr-2" />
+                QR Login
               </TabsTrigger>
             </TabsList>
 
@@ -349,6 +354,10 @@ const Auth = () => {
                   {loading ? 'Creating Account...' : 'Create Account'}
                 </Button>
               </form>
+            </TabsContent>
+
+            <TabsContent value="qr">
+              <QRCodeLogin onSuccess={() => navigate('/')} />
             </TabsContent>
           </Tabs>
         </Card>
