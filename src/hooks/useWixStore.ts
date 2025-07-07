@@ -40,15 +40,20 @@ export const useWixStore = () => {
     
     try {
       console.log('About to call wix-integration function...');
-      const { data, error: funcError } = await supabase.functions.invoke('wix-integration', {
+      const response = await supabase.functions.invoke('wix-integration', {
         body: { action: 'get-products' }
       });
 
-      console.log('Function response received:', { data, funcError });
-      if (funcError) {
-        console.error('Function error details:', funcError);
-        throw funcError;
+      console.log('Function response received:', response);
+      console.log('Response data:', response.data);
+      console.log('Response error:', response.error);
+      
+      if (response.error) {
+        console.error('Function error details:', response.error);
+        throw response.error;
       }
+
+      const { data } = response;
 
       // Transform Wix product data to our format
       const transformedProducts = data.products.map((product: any) => ({
