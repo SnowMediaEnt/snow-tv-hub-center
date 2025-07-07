@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Upload, Trash2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useMediaAssets, MediaAsset } from '@/hooks/useMediaAssets';
+import { useAuth } from '@/hooks/useAuth';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
 
 interface MediaManagerProps {
@@ -16,6 +18,8 @@ interface MediaManagerProps {
 
 const MediaManager = ({ onBack }: MediaManagerProps) => {
   const { assets, loading, uploadAsset, toggleAssetActive, deleteAsset, getAssetUrl } = useMediaAssets();
+  const { user } = useAuth();
+  const { profile, checkCredits, deductCredits } = useUserProfile();
   const { toast } = useToast();
   
   const [uploading, setUploading] = useState(false);
@@ -101,6 +105,25 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please sign in to generate AI images.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const imageCost = 0.10;
+    if (!checkCredits(imageCost)) {
+      toast({
+        title: "Insufficient credits",
+        description: `You need ${imageCost} credits to generate an image. Your balance: ${profile?.credits?.toFixed(2) || '0.00'}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setGenerating(true);
       
@@ -137,11 +160,22 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
 
       // Upload the generated image
       await uploadAsset(file, 'background', uploadForm.section, `AI Generated: ${generatePrompt}`);
+
+      // Deduct credits after successful generation
+      const creditDeducted = await deductCredits(imageCost, `AI Image Generation - ${generatePrompt}`);
       
-      toast({
-        title: "Image generated successfully",
-        description: "Your AI-generated background has been created and uploaded.",
-      });
+      if (!creditDeducted) {
+        toast({
+          title: "Credit deduction failed",
+          description: "Image generated but couldn't deduct credits. Contact support.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Image generated successfully",
+          description: `Your AI-generated background has been created. ${imageCost} credits deducted.`,
+        });
+      }
       
       setGeneratePrompt('');
     } catch (error) {
@@ -196,33 +230,48 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
         {/* AI Generation Section */}
         <Card className="bg-gradient-to-br from-purple-600 to-purple-800 border-purple-500 p-6 mb-6">
           <h2 className="text-2xl font-bold text-white mb-4">Generate Background with AI</h2>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Label htmlFor="generate-prompt" className="text-white mb-2 block">Describe the background you want</Label>
-              <Input
-                id="generate-prompt"
-                value={generatePrompt}
-                onChange={(e) => setGeneratePrompt(e.target.value)}
-                placeholder="e.g., A serene mountain landscape at sunset with purple sky"
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/60"
-                disabled={generating}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button
-                onClick={handleGenerateImage}
-                disabled={generating || !generatePrompt.trim()}
-                className="bg-white/20 border-white/30 text-white hover:bg-white/30"
-              >
-                {generating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  'Generate'
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="text-white">
+                <p className="text-sm text-purple-200">Cost: 0.10 credits per image</p>
+                {user && profile && (
+                  <p className="text-sm text-purple-200">
+                    Your balance: {profile.credits.toFixed(2)} credits
+                  </p>
                 )}
-              </Button>
+              </div>
+              {!user && (
+                <p className="text-sm text-purple-200 italic">Sign in to generate images</p>
+              )}
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Label htmlFor="generate-prompt" className="text-white mb-2 block">Describe the background you want</Label>
+                <Input
+                  id="generate-prompt"
+                  value={generatePrompt}
+                  onChange={(e) => setGeneratePrompt(e.target.value)}
+                  placeholder="e.g., A serene mountain landscape at sunset with purple sky"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                  disabled={generating || !user}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={handleGenerateImage}
+                  disabled={generating || !generatePrompt.trim() || !user || (profile && profile.credits < 0.10)}
+                  className="bg-white/20 border-white/30 text-white hover:bg-white/30"
+                >
+                  {generating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    'Generate'
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </Card>

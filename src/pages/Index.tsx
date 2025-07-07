@@ -2,14 +2,17 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, Store, Video, MessageCircle, Settings as SettingsIcon } from 'lucide-react';
+import { Package, Store, Video, MessageCircle, Settings as SettingsIcon, User, LogIn } from 'lucide-react';
 import NewsTicker from '@/components/NewsTicker';
 import InstallApps from '@/components/InstallApps';
 import MediaStore from '@/components/MediaStore';
 import SupportVideos from '@/components/SupportVideos';
 import ChatCommunity from '@/components/ChatCommunity';
 import Settings from '@/components/Settings';
+import UserDashboard from '@/components/UserDashboard';
 import { useDynamicBackground } from '@/hooks/useDynamicBackground';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -19,6 +22,8 @@ const Index = () => {
     return (saved as 'grid' | 'row') || 'grid';
   });
   const { backgroundUrl, hasBackground } = useDynamicBackground('home');
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const handleLayoutChange = (newMode: 'grid' | 'row') => {
     setLayoutMode(newMode);
@@ -122,6 +127,7 @@ const Index = () => {
             onLayoutChange={handleLayoutChange}
           />
         )}
+        {activeSection === 'dashboard' && <UserDashboard onBack={() => setActiveSection(null)} />}
       </div>
     );
   }
@@ -147,8 +153,29 @@ const Index = () => {
         </div>
       )}
 
-      {/* Settings Button */}
-      <div className="absolute top-4 right-4 z-20">
+      {/* User/Auth Controls */}
+      <div className="absolute top-4 right-4 z-20 flex gap-2">
+        {user ? (
+          <Button
+            onClick={() => setActiveSection('dashboard')}
+            variant="outline"
+            size="sm"
+            className="bg-green-600/20 border-green-500/50 text-white hover:bg-green-600/30"
+          >
+            <User className="w-4 h-4 mr-2" />
+            Dashboard
+          </Button>
+        ) : (
+          <Button
+            onClick={() => navigate('/auth')}
+            variant="outline"
+            size="sm"
+            className="bg-blue-600/20 border-blue-500/50 text-white hover:bg-blue-600/30"
+          >
+            <LogIn className="w-4 h-4 mr-2" />
+            Sign In
+          </Button>
+        )}
         <Button
           onClick={() => setActiveSection('settings')}
           variant="outline"

@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ai_image_usage: {
+        Row: {
+          cost_credits: number
+          created_at: string
+          id: string
+          image_url: string | null
+          prompt: string
+          user_id: string
+        }
+        Insert: {
+          cost_credits?: number
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          prompt: string
+          user_id: string
+        }
+        Update: {
+          cost_credits?: number
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          prompt?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       apps: {
         Row: {
           category: string
@@ -48,6 +75,36 @@ export type Database = {
           name?: string
           size?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          paypal_transaction_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          paypal_transaction_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          paypal_transaction_id?: string | null
+          transaction_type?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -93,15 +150,107 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          credits: number
+          email: string | null
+          full_name: string | null
+          id: string
+          total_spent: number
+          updated_at: string
+          user_id: string
+          username: string | null
+          wix_account_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          credits?: number
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          total_spent?: number
+          updated_at?: string
+          user_id: string
+          username?: string | null
+          wix_account_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          total_spent?: number
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+          wix_account_id?: string | null
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          connection_count: number
+          created_at: string
+          id: string
+          monthly_price: number
+          next_billing_date: string | null
+          paypal_subscription_id: string | null
+          plan_name: string
+          service_type: Database["public"]["Enums"]["service_type"]
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_count?: number
+          created_at?: string
+          id?: string
+          monthly_price: number
+          next_billing_date?: string | null
+          paypal_subscription_id?: string | null
+          plan_name: string
+          service_type: Database["public"]["Enums"]["service_type"]
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_count?: number
+          created_at?: string
+          id?: string
+          monthly_price?: number
+          next_billing_date?: string | null
+          paypal_subscription_id?: string | null
+          plan_name?: string
+          service_type?: Database["public"]["Enums"]["service_type"]
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      update_user_credits: {
+        Args: {
+          p_user_id: string
+          p_amount: number
+          p_transaction_type: string
+          p_description: string
+          p_paypal_transaction_id?: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       asset_type: "background" | "icon" | "logo" | "other"
+      service_type: "dreamstreams" | "plex"
+      subscription_status: "active" | "inactive" | "pending" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -218,6 +367,8 @@ export const Constants = {
   public: {
     Enums: {
       asset_type: ["background", "icon", "logo", "other"],
+      service_type: ["dreamstreams", "plex"],
+      subscription_status: ["active", "inactive", "pending", "cancelled"],
     },
   },
 } as const
