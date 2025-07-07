@@ -29,6 +29,67 @@ export interface CartItem {
   image?: string;
 }
 
+// Mock product data for testing - replace with real Wix data later
+const mockProducts: WixProduct[] = [
+  {
+    id: 'mock-1',
+    name: 'Android TV Box Pro',
+    description: 'High-performance Android TV streaming device with 4K support',
+    price: 89.99,
+    comparePrice: 119.99,
+    images: ['/placeholder.svg'],
+    inStock: true,
+    inventory: { quantity: 15 },
+    productOptions: [
+      {
+        name: 'Storage',
+        choices: [
+          { value: '32GB', description: '32GB Storage' },
+          { value: '64GB', description: '64GB Storage' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'mock-2',
+    name: 'Premium IPTV Subscription',
+    description: '12-month premium streaming service with 1000+ channels',
+    price: 159.99,
+    comparePrice: 199.99,
+    images: ['/placeholder.svg'],
+    inStock: true,
+    inventory: { quantity: 50 }
+  },
+  {
+    id: 'mock-3',
+    name: 'Wireless Remote Control',
+    description: 'Universal remote control with voice command and backlight',
+    price: 24.99,
+    images: ['/placeholder.svg'],
+    inStock: true,
+    inventory: { quantity: 8 }
+  },
+  {
+    id: 'mock-4',
+    name: 'Fire TV Stick 4K Max',
+    description: 'Latest Fire TV Stick with enhanced Wi-Fi 6 support',
+    price: 54.99,
+    comparePrice: 69.99,
+    images: ['/placeholder.svg'],
+    inStock: false,
+    inventory: { quantity: 0 }
+  },
+  {
+    id: 'mock-5',
+    name: 'HDMI Cable 4K Ultra',
+    description: 'Premium HDMI cable supporting 4K@60Hz and HDR',
+    price: 12.99,
+    images: ['/placeholder.svg'],
+    inStock: true,
+    inventory: { quantity: 25 }
+  }
+];
+
 export const useWixStore = () => {
   const [products, setProducts] = useState<WixProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,39 +100,17 @@ export const useWixStore = () => {
     setError(null);
     
     try {
-      console.log('About to call wix-integration function...');
-      const response = await supabase.functions.invoke('wix-integration', {
-        body: { action: 'get-products' }
-      });
-
-      console.log('Function response received:', response);
-      console.log('Response data:', response.data);
-      console.log('Response error:', response.error);
+      // Using mock data for now - will switch to real Wix API later
+      console.log('Loading mock products...');
       
-      if (response.error) {
-        console.error('Function error details:', response.error);
-        throw response.error;
-      }
-
-      const { data } = response;
-
-      // Transform Wix product data to our format
-      const transformedProducts = data.products.map((product: any) => ({
-        id: product.id,
-        name: product.name,
-        description: product.description || '',
-        price: product.price?.price || 0,
-        comparePrice: product.price?.comparePrice,
-        images: product.media?.items?.map((item: any) => item.image?.url) || ['/placeholder.svg'],
-        inStock: product.stock?.inStock !== false,
-        inventory: product.stock?.quantity ? { quantity: product.stock.quantity } : undefined,
-        productOptions: product.productOptions || []
-      }));
-
-      setProducts(transformedProducts);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setProducts(mockProducts);
+      console.log('Mock products loaded successfully');
     } catch (err) {
-      console.error('Error fetching Wix products:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch products');
+      console.error('Error loading products:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load products');
     } finally {
       setLoading(false);
     }
