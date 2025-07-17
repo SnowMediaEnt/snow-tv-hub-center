@@ -95,38 +95,41 @@ const WixVerification = () => {
                 <XCircle className="w-5 h-5 text-red-400 mr-2" />
               )}
               <span className="text-white font-medium">
-                {connectionResult.connected ? 'Connected' : 'Connection Failed'}
+                {connectionResult.connected ? 'Connected!' : 'Connection Failed'}
               </span>
             </div>
             
             {connectionResult.connected && (
               <div className="text-white/80 text-sm">
                 <p><strong>Total Members:</strong> {connectionResult.totalMembers}</p>
+                <p><strong>Working Method:</strong> {connectionResult.workingEndpoint}</p>
                 <p><strong>Status:</strong> {connectionResult.message}</p>
               </div>
             )}
             
-            {!connectionResult.connected && (
+            {!connectionResult.connected && connectionResult.testResults && (
               <div className="text-white/80 text-sm">
-                <p><strong>Error:</strong> {connectionResult.error}</p>
-                {connectionResult.suggestions && (
-                  <div className="mt-2">
-                    <p><strong>Suggestions:</strong></p>
-                    <ul className="list-disc pl-5 mt-1">
-                      {connectionResult.suggestions.map((suggestion: string, index: number) => (
-                        <li key={index}>{suggestion}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {connectionResult.statusCode === 403 && (
-                  <div className="mt-2 p-2 bg-red-500/20 rounded border border-red-500/30">
-                    <p className="text-red-300 font-semibold">⚠️ Permission Issue Detected</p>
-                    <p className="text-red-200 text-xs mt-1">
-                      Your API key needs "Read Members" permissions enabled in the Wix API Keys Manager.
-                    </p>
-                  </div>
-                )}
+                <p><strong>Test Results:</strong></p>
+                <div className="mt-2 space-y-2">
+                  {connectionResult.testResults.map((test: any, index: number) => (
+                    <div key={index} className="p-2 bg-white/5 rounded border border-white/10">
+                      <div className="flex items-center">
+                        {test.success ? (
+                          <CheckCircle className="w-4 h-4 text-green-400 mr-2" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-400 mr-2" />
+                        )}
+                        <span className="font-medium">{test.name}</span>
+                        <span className="ml-2 text-xs text-white/60">({test.status})</span>
+                      </div>
+                      {!test.success && (
+                        <div className="mt-1 text-xs text-white/70">
+                          <p className="break-words">{test.response}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

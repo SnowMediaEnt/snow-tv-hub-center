@@ -294,99 +294,158 @@ Deno.serve(async (req) => {
         );
 
       case 'test-connection':
-        // Test Wix API connection with improved debugging
-        console.log('Testing Wix API connection...');
-        console.log('API Key format:', wixApiKey ? `${wixApiKey.substring(0, 10)}...` : 'missing');
-        console.log('Account ID:', wixAccountId);
+        // Test multiple Wix API endpoints and authentication methods
+        console.log('Testing Wix API connection with multiple approaches...');
+        console.log('API Key format:', wixApiKey ? `${wixApiKey.substring(0, 20)}...` : 'missing');
+        console.log('Account/Site ID:', wixAccountId);
         
-        // According to Wix docs, try using account ID in wix-account-id header as well
-        const testHeaders = {
-          'Authorization': `Bearer ${wixApiKey}`,
-          'wix-site-id': wixAccountId,
-          'wix-account-id': wixAccountId, // Also try account ID
-          'Content-Type': 'application/json',
+        const testResults = {
+          endpoints: [],
+          connected: false,
+          workingEndpoint: null,
+          totalMembers: 0
         };
         
-        console.log('Test headers:', JSON.stringify(testHeaders, null, 2));
-        
-        // Try the members endpoint with better error handling
-        const membersTestResponse = await fetch(`https://www.wixapis.com/members/v1/members/query`, {
-          method: 'POST',
-          headers: testHeaders,
-          body: JSON.stringify({
-            query: {
-              paging: {
-                limit: 1
-              }
-            }
-          })
-        });
-
-        console.log('Members test response status:', membersTestResponse.status);
-        console.log('Members test response headers:', JSON.stringify(Object.fromEntries(membersTestResponse.headers.entries()), null, 2));
-        
-        const responseText = await membersTestResponse.text();
-        console.log('Members test response body:', responseText);
-        
-        if (membersTestResponse.ok) {
-          try {
-            const membersData = JSON.parse(responseText);
-            return new Response(
-              JSON.stringify({ 
-                connected: true,
-                totalMembers: membersData.totalCount || 0,
-                message: 'Wix API connection successful',
-                apiKeyWorking: true
-              }),
-              { 
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-              }
-            );
-          } catch (parseError) {
-            console.error('Error parsing response:', parseError);
-            return new Response(
-              JSON.stringify({ 
-                connected: false,
-                error: 'Response parsing error',
-                details: responseText,
-                message: 'API returned 200 but response was not valid JSON'
-              }),
-              { 
-                status: 200, 
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-              }
-            );
-          }
-        } else {
-          // Provide detailed error information
-          let errorMessage = `Members API error: ${membersTestResponse.status} ${membersTestResponse.statusText}`;
-          let suggestions = [];
+        // Test 1: Try with wix-site-id header
+        console.log('Test 1: Standard wix-site-id approach');
+        try {
+          const test1Response = await fetch(`https://www.wixapis.com/members/v1/members/query`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${wixApiKey}`,
+              'wix-site-id': wixAccountId,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              query: { paging: { limit: 1 } }
+            })
+          });
           
-          if (membersTestResponse.status === 401) {
-            suggestions.push('Check if your API key is valid and not expired');
-            suggestions.push('Verify your API key has "Read Members" permissions');
-          } else if (membersTestResponse.status === 403) {
-            suggestions.push('API key lacks required permissions');
-            suggestions.push('Go to https://manage.wix.com/account/api-keys and ensure "Read Members" permission is enabled');
-          } else if (membersTestResponse.status === 404) {
-            suggestions.push('Check if your site ID is correct');
-            suggestions.push('Extract site ID from your dashboard URL: https://www.wix.com/dashboard/SITE-ID');
-          }
+          const test1Text = await test1Response.text();
+          console.log('Test 1 status:', test1Response.status, 'body:', test1Text);
           
-          return new Response(
-            JSON.stringify({ 
-              connected: false,
-              error: errorMessage,
-              details: responseText,
-              suggestions: suggestions,
-              statusCode: membersTestResponse.status
-            }),
-            { 
-              status: 200, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          );
+          testResults.endpoints.push({
+            name: 'wix-site-id header',
+            status: test1Response.status,
+            success: test1Response.ok,
+            response: test1Text
+          });
+          
+          if (test1Response.ok) {
+            const data = JSON.parse(test1Text);
+            testResults.connected = true;
+            testResults.workingEndpoint = 'wix-site-id';
+            testResults.totalMembers = data.totalCount || 0;
+          }
+        } catch (error) {
+          console.error('Test 1 error:', error);
+          testResults.endpoints.push({
+            name: 'wix-site-id header',
+            status: 'error',
+            success: false,
+            response: error.message
+          });
         }
+        
+        // Test 2: Try with wix-account-id header instead
+        if (!testResults.connected) {
+          console.log('Test 2: Using wix-account-id header');
+          try {
+            const test2Response = await fetch(`https://www.wixapis.com/members/v1/members/query`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${wixApiKey}`,
+                'wix-account-id': wixAccountId,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                query: { paging: { limit: 1 } }
+              })
+            });
+            
+            const test2Text = await test2Response.text();
+            console.log('Test 2 status:', test2Response.status, 'body:', test2Text);
+            
+            testResults.endpoints.push({
+              name: 'wix-account-id header',
+              status: test2Response.status,
+              success: test2Response.ok,
+              response: test2Text
+            });
+            
+            if (test2Response.ok) {
+              const data = JSON.parse(test2Text);
+              testResults.connected = true;
+              testResults.workingEndpoint = 'wix-account-id';
+              testResults.totalMembers = data.totalCount || 0;
+            }
+          } catch (error) {
+            console.error('Test 2 error:', error);
+            testResults.endpoints.push({
+              name: 'wix-account-id header',
+              status: 'error',
+              success: false,
+              response: error.message
+            });
+          }
+        }
+        
+        // Test 3: Try both headers
+        if (!testResults.connected) {
+          console.log('Test 3: Using both wix-site-id and wix-account-id headers');
+          try {
+            const test3Response = await fetch(`https://www.wixapis.com/members/v1/members/query`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${wixApiKey}`,
+                'wix-site-id': wixAccountId,
+                'wix-account-id': wixAccountId,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                query: { paging: { limit: 1 } }
+              })
+            });
+            
+            const test3Text = await test3Response.text();
+            console.log('Test 3 status:', test3Response.status, 'body:', test3Text);
+            
+            testResults.endpoints.push({
+              name: 'both headers',
+              status: test3Response.status,
+              success: test3Response.ok,
+              response: test3Text
+            });
+            
+            if (test3Response.ok) {
+              const data = JSON.parse(test3Text);
+              testResults.connected = true;
+              testResults.workingEndpoint = 'both headers';
+              testResults.totalMembers = data.totalCount || 0;
+            }
+          } catch (error) {
+            console.error('Test 3 error:', error);
+            testResults.endpoints.push({
+              name: 'both headers',
+              status: 'error',
+              success: false,
+              response: error.message
+            });
+          }
+        }
+        
+        return new Response(
+          JSON.stringify({ 
+            connected: testResults.connected,
+            totalMembers: testResults.totalMembers,
+            workingEndpoint: testResults.workingEndpoint,
+            testResults: testResults.endpoints,
+            message: testResults.connected ? 'Found working endpoint!' : 'All endpoints failed'
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
 
       default:
         return new Response(
