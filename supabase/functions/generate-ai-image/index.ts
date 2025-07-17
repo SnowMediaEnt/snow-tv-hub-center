@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, size = '1024x1024' } = await req.json();
 
     if (!prompt) {
       throw new Error('Prompt is required');
@@ -24,10 +24,10 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    console.log('Generating image with prompt:', prompt);
+    console.log('Generating image with prompt:', prompt, 'size:', size);
 
     // Enhanced prompt for better background generation
-    const enhancedPrompt = `Ultra high resolution 16:9 aspect ratio background image: ${prompt}. Professional, cinematic quality, suitable for desktop wallpaper.`;
+    const enhancedPrompt = `Ultra high resolution background image: ${prompt}. Professional, cinematic quality, suitable for desktop wallpaper.`;
 
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
@@ -39,7 +39,7 @@ serve(async (req) => {
         model: 'gpt-image-1',
         prompt: enhancedPrompt,
         n: 1,
-        size: '1792x1024', // 16:9 aspect ratio
+        size: size,
         quality: 'hd',
         output_format: 'jpeg'
       }),

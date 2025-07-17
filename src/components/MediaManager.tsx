@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Upload, Trash2, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, Upload, Trash2, Eye, EyeOff, Loader2, Monitor } from 'lucide-react';
 import { useMediaAssets, MediaAsset } from '@/hooks/useMediaAssets';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -25,11 +25,77 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generatePrompt, setGeneratePrompt] = useState('');
+  const [screenInfo, setScreenInfo] = useState({ width: 1920, height: 1080, ratio: '16:9' });
   const [uploadForm, setUploadForm] = useState({
     assetType: 'background' as MediaAsset['asset_type'],
     section: 'home',
     description: ''
   });
+
+  // Detect screen resolution and optimal image size
+  useEffect(() => {
+    const updateScreenInfo = () => {
+      const width = window.screen.width;
+      const height = window.screen.height;
+      const aspectRatio = width / height;
+      
+      let ratio = '16:9';
+      if (Math.abs(aspectRatio - (4/3)) < 0.1) {
+        ratio = '4:3';
+      } else if (Math.abs(aspectRatio - (21/9)) < 0.1) {
+        ratio = '21:9';
+      } else if (Math.abs(aspectRatio - (16/10)) < 0.1) {
+        ratio = '16:10';
+      }
+      
+      setScreenInfo({ width, height, ratio });
+    };
+    
+    updateScreenInfo();
+    window.addEventListener('resize', updateScreenInfo);
+    return () => window.removeEventListener('resize', updateScreenInfo);
+  }, []);
+
+  // Calculate optimal OpenAI image size and cost based on screen ratio
+  const getOptimalImageConfig = () => {
+    const { width, height, ratio } = screenInfo;
+    
+    // For high resolution screens (4K, etc), use larger image size
+    if (width >= 3840 || height >= 2160) {
+      return {
+        size: '1536x1024',
+        credits: 12,
+        description: 'High resolution (1536x1024) for 4K+ screens'
+      };
+    }
+    
+    // For ultrawide or 16:9 screens, use landscape format
+    if (ratio === '21:9' || ratio === '16:9' || ratio === '16:10') {
+      return {
+        size: '1536x1024',
+        credits: 12,
+        description: 'Landscape format (1536x1024) for widescreen'
+      };
+    }
+    
+    // For 4:3 or square-ish screens, use square format
+    if (ratio === '4:3') {
+      return {
+        size: '1024x1024',
+        credits: 6,
+        description: 'Square format (1024x1024) for 4:3 screens'
+      };
+    }
+    
+    // Default to landscape for most modern screens
+    return {
+      size: '1536x1024',
+      credits: 12,
+      description: 'Landscape format (1536x1024) - optimal for most screens'
+    };
+  };
+
+  const imageConfig = getOptimalImageConfig();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -117,11 +183,11 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
       return;
     }
 
-    const imageCost = 0.10;
+    const imageCost = imageConfig.credits * 0.01; // Convert credits to dollars
     if (!checkCredits(imageCost)) {
       toast({
         title: "Insufficient credits",
-        description: `You need ${imageCost} credits to generate an image. Your balance: ${profile?.credits?.toFixed(2) || '0.00'}`,
+        description: `You need ${imageCost.toFixed(2)} credits to generate an image. Your balance: ${profile?.credits?.toFixed(2) || '0.00'}`,
         variant: "destructive",
       });
       return;
@@ -138,7 +204,8 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
           'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhbG13emh2eG9lZnZrZnNpeWxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4MjIwNDMsImV4cCI6MjA2NzM5ODA0M30.I-YfvZxAuOvhehrdoZOgrANirZv0-ucGUKbW9gOfQak`
         },
         body: JSON.stringify({
-          prompt: generatePrompt
+          prompt: generatePrompt,
+          size: imageConfig.size
         })
       });
 
@@ -176,7 +243,7 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
       } else {
         toast({
           title: "Image generated successfully",
-          description: `Your AI-generated background has been created. ${imageCost} credits deducted.`,
+          description: `Your AI-generated background has been created. ${imageCost.toFixed(2)} credits deducted.`,
         });
       }
       
@@ -236,7 +303,15 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="text-white">
-                <p className="text-sm text-purple-200">Cost: 0.10 credits per image</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Monitor className="w-4 h-4" />
+                  <span className="text-sm text-purple-200">
+                    Detected: {screenInfo.width}x{screenInfo.height} ({screenInfo.ratio})
+                  </span>
+                </div>
+                <p className="text-sm text-purple-200">
+                  Cost: {(imageConfig.credits * 0.01).toFixed(2)} credits - {imageConfig.description}
+                </p>
                 {user && profile && (
                   <p className="text-sm text-purple-200">
                     Your balance: {profile.credits.toFixed(2)} credits
@@ -262,7 +337,7 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
               <div className="flex items-end">
                 <Button
                   onClick={handleGenerateImage}
-                  disabled={generating || !generatePrompt.trim() || !user || (profile && profile.credits < 0.10)}
+                  disabled={generating || !generatePrompt.trim() || !user || (profile && profile.credits < (imageConfig.credits * 0.01))}
                   className="bg-white/20 border-white/30 text-white hover:bg-white/30"
                 >
                   {generating ? (
