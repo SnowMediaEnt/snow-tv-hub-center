@@ -187,21 +187,34 @@ Deno.serve(async (req) => {
 
       case 'verify-member':
         // Verify if a member exists in Wix by email
+        console.log('Verifying member with email:', email);
+        console.log('Using API Key:', wixApiKey ? `${wixApiKey.substring(0, 20)}...` : 'missing');
+        console.log('Using Account ID:', wixAccountId);
+        
+        const requestHeaders = {
+          'Authorization': `Bearer ${wixApiKey}`,
+          'wix-site-id': wixAccountId,
+          'Content-Type': 'application/json',
+        };
+        
+        console.log('Request headers:', JSON.stringify(requestHeaders, null, 2));
+        
+        const requestBody = {
+          filter: {
+            loginEmail: { $eq: email }
+          }
+        };
+        
+        console.log('Request body:', JSON.stringify(requestBody, null, 2));
+        
         const memberResponse = await fetch(`https://www.wixapis.com/members/v1/members/query`, {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${wixApiKey}`,
-            'wix-site-id': wixAccountId,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            filter: {
-              loginEmail: { $eq: email }
-            }
-          })
+          headers: requestHeaders,
+          body: JSON.stringify(requestBody)
         });
 
         console.log('Member verification response status:', memberResponse.status);
+        console.log('Member verification response headers:', JSON.stringify(Object.fromEntries(memberResponse.headers.entries()), null, 2));
 
         // Handle different response statuses
         if (memberResponse.status === 404) {
