@@ -294,34 +294,88 @@ Deno.serve(async (req) => {
         );
 
       case 'test-connection':
-        // Test Wix API connection by getting member count
-        const testResponse = await fetch(`https://www.wixapis.com/members/v1/members/query`, {
-          method: 'POST',
+        // Test Wix API connection by trying different endpoints
+        console.log('Testing Wix API connection...');
+        
+        // Try the site info endpoint first (this is usually more reliable)
+        const siteTestResponse = await fetch(`https://www.wixapis.com/site-properties/v4/properties`, {
+          method: 'GET',
           headers: {
             'Authorization': `Bearer ${wixApiKey}`,
             'wix-site-id': wixAccountId,
             'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: {
-              paging: {
-                limit: 1
-              }
-            }
-          })
+          }
         });
 
-        console.log('Test connection response status:', testResponse.status);
-        console.log('Test connection response headers:', Object.fromEntries(testResponse.headers.entries()));
+        console.log('Site properties test response status:', siteTestResponse.status);
+        console.log('Site properties test response headers:', JSON.stringify(Object.fromEntries(siteTestResponse.headers.entries()), null, 2));
 
-        if (!testResponse.ok) {
-          const errorText = await testResponse.text();
-          console.error('Test connection error:', errorText);
+        if (siteTestResponse.ok) {
+          const siteData = await siteTestResponse.json();
+          console.log('Site data retrieved successfully');
+          
+          // Now try the members endpoint
+          const membersTestResponse = await fetch(`https://www.wixapis.com/members/v1/members/query`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${wixApiKey}`,
+              'wix-site-id': wixAccountId,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              query: {
+                paging: {
+                  limit: 1
+                }
+              }
+            })
+          });
+
+          console.log('Members test response status:', membersTestResponse.status);
+          
+          if (membersTestResponse.ok) {
+            const membersData = await membersTestResponse.json();
+            return new Response(
+              JSON.stringify({ 
+                connected: true,
+                totalMembers: membersData.totalCount || 0,
+                message: 'Wix API connection successful',
+                siteConnected: true,
+                membersConnected: true
+              }),
+              { 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+              }
+            );
+          } else {
+            const membersErrorText = await membersTestResponse.text();
+            console.error('Members endpoint error:', membersErrorText);
+            return new Response(
+              JSON.stringify({ 
+                connected: false,
+                siteConnected: true,
+                membersConnected: false,
+                error: `Members API error: ${membersTestResponse.status} ${membersTestResponse.statusText}`,
+                details: membersErrorText,
+                message: 'Site connected but Members API failed'
+              }),
+              { 
+                status: 200, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+              }
+            );
+          }
+        } else {
+          const siteErrorText = await siteTestResponse.text();
+          console.error('Site properties error:', siteErrorText);
           return new Response(
             JSON.stringify({ 
               connected: false,
-              error: `Wix API error: ${testResponse.status} ${testResponse.statusText}`,
-              details: errorText
+              siteConnected: false,
+              membersConnected: false,
+              error: `Site API error: ${siteTestResponse.status} ${siteTestResponse.statusText}`,
+              details: siteErrorText,
+              message: 'Basic site connection failed'
             }),
             { 
               status: 200, 
@@ -329,19 +383,6 @@ Deno.serve(async (req) => {
             }
           );
         }
-
-        const testData = await testResponse.json();
-        
-        return new Response(
-          JSON.stringify({ 
-            connected: true,
-            totalMembers: testData.totalCount || 0,
-            message: 'Wix API connection successful'
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
 
       default:
         return new Response(
