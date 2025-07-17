@@ -1,4 +1,6 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { Resend } from "npm:resend@2.0.0";
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,11 +24,41 @@ const getEmailTemplate = (type: string, data: any) => {
       return {
         subject: 'Welcome to Snow Media Center',
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">Welcome to Snow Media Center, ${data.name || 'there'}!</h2>
-            <p>Your account has been successfully created. You can now access all Snow Media Center features.</p>
-            <p>If you have any questions, please contact us at support@snowmediaent.com</p>
-            <p>Best regards,<br>The Snow Media Center Team</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+            <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #2563eb; margin: 0; font-size: 28px;">Welcome to Snow Media Center!</h1>
+              </div>
+              
+              <div style="margin-bottom: 25px;">
+                <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0;">
+                  Hello ${data.name || 'there'},
+                </p>
+                <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 15px 0;">
+                  Thank you for joining Snow Media Center! Your account has been successfully created and you're now part of our exclusive community.
+                </p>
+                <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 15px 0;">
+                  You can now access all your media content, manage your apps, and enjoy our premium features.
+                </p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${data.loginUrl || '#'}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
+                  Get Started
+                </a>
+              </div>
+              
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                <p style="color: #6b7280; font-size: 14px; line-height: 1.5; margin: 0;">
+                  If you have any questions or need support, please contact us at 
+                  <a href="mailto:support@snowmediaent.com" style="color: #2563eb; text-decoration: none;">support@snowmediaent.com</a>
+                </p>
+                <p style="color: #6b7280; font-size: 14px; line-height: 1.5; margin: 10px 0 0 0;">
+                  Best regards,<br>
+                  The Snow Media Center Team
+                </p>
+              </div>
+            </div>
           </div>
         `
       }
@@ -34,13 +66,23 @@ const getEmailTemplate = (type: string, data: any) => {
       return {
         subject: 'Verify Your Snow Media Center Account',
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">Verify Your Account</h2>
-            <p>Hi ${data.name || 'there'},</p>
-            <p>Please click the link below to verify your Snow Media Center account:</p>
-            <p><a href="${data.verificationUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Account</a></p>
-            <p>If you didn't create this account, please ignore this email.</p>
-            <p>Best regards,<br>The Snow Media Center Team</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+            <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              <h1 style="color: #2563eb; text-align: center; margin-bottom: 30px;">Verify Your Account</h1>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hello ${data.name || 'there'},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Please verify your email address by clicking the button below:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${data.verificationUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                  Verify Account
+                </a>
+              </div>
+              <p style="color: #6b7280; font-size: 14px;">
+                If you didn't create an account, please ignore this email.
+              </p>
+              <p style="color: #6b7280; font-size: 14px;">
+                Best regards,<br>The Snow Media Center Team
+              </p>
+            </div>
           </div>
         `
       }
@@ -48,13 +90,23 @@ const getEmailTemplate = (type: string, data: any) => {
       return {
         subject: 'Reset Your Snow Media Center Password',
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">Reset Your Password</h2>
-            <p>Hi ${data.name || 'there'},</p>
-            <p>Click the link below to reset your Snow Media Center password:</p>
-            <p><a href="${data.resetUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
-            <p>If you didn't request this reset, please ignore this email.</p>
-            <p>Best regards,<br>The Snow Media Center Team</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+            <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              <h1 style="color: #2563eb; text-align: center; margin-bottom: 30px;">Reset Your Password</h1>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hello ${data.name || 'there'},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">You requested to reset your password. Click the button below to create a new password:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${data.resetUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                  Reset Password
+                </a>
+              </div>
+              <p style="color: #6b7280; font-size: 14px;">
+                If you didn't request this, please ignore this email.
+              </p>
+              <p style="color: #6b7280; font-size: 14px;">
+                Best regards,<br>The Snow Media Center Team
+              </p>
+            </div>
           </div>
         `
       }
@@ -70,12 +122,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const gmailUser = Deno.env.get('GMAIL_USER');
-    const gmailPassword = Deno.env.get('GMAIL_APP_PASSWORD');
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
 
-    if (!gmailUser || !gmailPassword) {
+    if (!resendApiKey) {
       return new Response(
-        JSON.stringify({ error: 'Gmail credentials not configured' }),
+        JSON.stringify({ error: 'Resend API key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -84,37 +135,21 @@ Deno.serve(async (req) => {
     
     const template = getEmailTemplate(type, data);
     
-    // Send email via Gmail SMTP
-    const emailPayload = {
+    // Send email using Resend
+    const result = await resend.emails.send({
       from: 'Snow Media Center <support@snowmediaent.com>',
-      to: to,
+      to: [to],
       subject: template.subject,
       html: template.html
-    };
+    });
 
-    // Create basic email content
-    const emailContent = `From: Snow Media Center <${gmailUser}>
-To: ${to}
-Subject: ${template.subject}
-Content-Type: text/html; charset=UTF-8
+    console.log('Email sent successfully:', result);
 
-${template.html}`;
-
-    // Encode credentials for Gmail SMTP
-    const auth = btoa(`${gmailUser}:${gmailPassword}`);
-    
-    // Use Gmail SMTP (simplified approach)
-    // In a real implementation, you'd use a proper SMTP client
-    console.log('Sending email to:', to);
-    console.log('Subject:', template.subject);
-    console.log('From:', gmailUser);
-    
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: 'Email sent successfully',
-        to: to,
-        subject: template.subject
+        result: result
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
