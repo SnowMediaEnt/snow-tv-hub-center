@@ -1,4 +1,32 @@
-# Welcome to your Lovable project
+# Snow Media Center App
+
+A React-based mobile application for Snow Media Center with Wix integration and custom email functionality.
+
+## Features
+
+- **Wix Integration**: Connects to Wix member database for authentication
+- **Custom Email**: Sends emails from support@snowmediaent.com using Gmail SMTP
+- **User Dashboard**: Personalized dashboard for each user
+- **App Management**: Install and manage applications
+- **Media Store**: Browse and purchase media content
+- **QR Code Login**: Quick login via QR code scanning
+
+## Authentication Flow
+
+1. **Signup**: Verifies email exists in Wix member database before allowing registration
+2. **Login**: Checks Wix membership and updates profile with Wix account ID
+3. **Email Verification**: Sends custom welcome emails from support@snowmediaent.com
+
+## Gmail Setup
+
+To send emails from your custom domain:
+
+1. Go to your Gmail account settings for support@snowmediaent.com
+2. Enable 2-factor authentication
+3. Generate an App Password:
+   - Go to Google Account → Security → App passwords
+   - Generate a new app password for "Mail"
+   - Use this password (not your regular Gmail password)
 
 ## Project info
 
