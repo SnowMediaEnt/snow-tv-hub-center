@@ -9,7 +9,8 @@ import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 const WixVerification = () => {
   const [email, setEmail] = useState('');
   const [verificationResult, setVerificationResult] = useState<any>(null);
-  const { verifyWixMember, loading } = useWixIntegration();
+  const [connectionResult, setConnectionResult] = useState<any>(null);
+  const { verifyWixMember, testConnection, loading } = useWixIntegration();
   const { toast } = useToast();
 
   const handleVerify = async () => {
@@ -43,11 +44,76 @@ const WixVerification = () => {
     }
   };
 
+  const handleTestConnection = async () => {
+    try {
+      const result = await testConnection();
+      setConnectionResult(result);
+      
+      toast({
+        title: result.connected ? "Wix connected!" : "Wix connection failed",
+        description: result.connected 
+          ? `Found ${result.totalMembers} members in database` 
+          : result.error || "Could not connect to Wix",
+        variant: result.connected ? "default" : "destructive",
+      });
+    } catch (error) {
+      console.error('Connection test error:', error);
+      toast({
+        title: "Connection test failed",
+        description: "Could not test Wix connection. Check the function logs.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Card className="bg-gradient-to-br from-purple-600 to-purple-800 border-purple-500 p-6 max-w-md mx-auto">
       <h3 className="text-2xl font-bold text-white mb-4">Test Wix Integration</h3>
       
       <div className="space-y-4">
+        <Button 
+          onClick={handleTestConnection} 
+          disabled={loading}
+          className="w-full bg-blue-600 text-white hover:bg-blue-700"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Testing...
+            </>
+          ) : (
+            'Test Wix Connection'
+          )}
+        </Button>
+
+        {connectionResult && (
+          <div className="mt-4 p-4 bg-white/10 rounded-lg border border-white/20">
+            <div className="flex items-center mb-2">
+              {connectionResult.connected ? (
+                <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
+              ) : (
+                <XCircle className="w-5 h-5 text-red-400 mr-2" />
+              )}
+              <span className="text-white font-medium">
+                {connectionResult.connected ? 'Connected' : 'Connection Failed'}
+              </span>
+            </div>
+            
+            {connectionResult.connected && (
+              <div className="text-white/80 text-sm">
+                <p><strong>Total Members:</strong> {connectionResult.totalMembers}</p>
+                <p><strong>Status:</strong> {connectionResult.message}</p>
+              </div>
+            )}
+            
+            {!connectionResult.connected && connectionResult.error && (
+              <div className="text-white/80 text-sm">
+                <p><strong>Error:</strong> {connectionResult.error}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         <Input
           type="email"
           placeholder="Enter email to verify"

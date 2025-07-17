@@ -51,9 +51,29 @@ export const useWixIntegration = () => {
     }
   };
 
+  const testConnection = async (): Promise<{ connected: boolean; totalMembers?: number; error?: string; message?: string }> => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('wix-integration', {
+        body: {
+          action: 'test-connection'
+        }
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error testing Wix connection:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     verifyWixMember,
-    getWixMember
+    getWixMember,
+    testConnection
   };
 };
