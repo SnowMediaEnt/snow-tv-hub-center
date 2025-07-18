@@ -166,6 +166,9 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
     try {
       setGenerating(true);
       
+      // Enhance prompt for wallpaper/background generation
+      const enhancedPrompt = `High quality wallpaper background image: ${generatePrompt}. Ultra detailed, professional wallpaper quality, suitable for desktop background.`;
+      
       // Call our Hugging Face edge function
       const response = await fetch(`https://falmwzhvxoefvkfsiylp.supabase.co/functions/v1/generate-hf-image`, {
         method: 'POST',
@@ -174,7 +177,7 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
           'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhbG13emh2eG9lZnZrZnNpeWxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4MjIwNDMsImV4cCI6MjA2NzM5ODA0M30.I-YfvZxAuOvhehrdoZOgrANirZv0-ucGUKbW9gOfQak`
         },
         body: JSON.stringify({
-          prompt: generatePrompt
+          prompt: enhancedPrompt
         })
       });
 
