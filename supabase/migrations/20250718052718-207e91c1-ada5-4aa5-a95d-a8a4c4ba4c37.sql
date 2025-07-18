@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 -- Schedule automatic knowledge sync every hour
 SELECT cron.schedule(
   'auto-knowledge-sync',
-  '0 * * * *', -- Every hour at minute 0
+  '* * * * *', -- Every minute
   $$
   SELECT
     net.http_post(
