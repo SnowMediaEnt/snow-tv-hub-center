@@ -60,21 +60,21 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
   const getOptimalImageConfig = () => {
     const { width, height, ratio } = screenInfo;
     
-    // For high resolution screens (4K, etc), use larger image size
+    // For high resolution screens (4K, etc), use larger landscape format
     if (width >= 3840 || height >= 2160) {
       return {
-        size: '1536x1024',
+        size: '1792x1024',
         credits: 12,
-        description: 'High resolution (1536x1024) for 4K+ screens'
+        description: 'High resolution (1792x1024) for 4K+ screens'
       };
     }
     
     // For ultrawide or 16:9 screens, use landscape format
     if (ratio === '21:9' || ratio === '16:9' || ratio === '16:10') {
       return {
-        size: '1536x1024',
+        size: '1792x1024',
         credits: 12,
-        description: 'Landscape format (1536x1024) for widescreen'
+        description: 'Landscape format (1792x1024) for widescreen'
       };
     }
     
@@ -89,9 +89,9 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
     
     // Default to landscape for most modern screens
     return {
-      size: '1536x1024',
+      size: '1792x1024',
       credits: 12,
-      description: 'Landscape format (1536x1024) - optimal for most screens'
+      description: 'Landscape format (1792x1024) - optimal for most screens'
     };
   };
 
