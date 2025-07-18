@@ -144,6 +144,25 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
       return;
     }
 
+    // Content filter for inappropriate content
+    const inappropriateWords = [
+      'naked', 'nude', 'boobs', 'boobies', 'breast', 'penis', 'vagina', 'ass', 'butt', 'nsfw',
+      'sex', 'sexual', 'porn', 'adult', 'explicit', 'erotic', 'intimate', 'underwear', 'bikini',
+      'lingerie', 'topless', 'bottomless', 'revealing', 'suggestive', 'seductive'
+    ];
+    
+    const promptLower = generatePrompt.toLowerCase();
+    const foundInappropriate = inappropriateWords.find(word => promptLower.includes(word));
+    
+    if (foundInappropriate) {
+      toast({
+        title: "Content Policy Violation",
+        description: "Your request contains inappropriate content and cannot be processed. Please create family-friendly wallpaper descriptions only.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!user) {
       toast({
         title: "Login required",
