@@ -16,7 +16,12 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
   const handleVideoClick = (embedUrl: string) => {
-    setSelectedVideo(embedUrl);
+    // Open video in fullscreen mode immediately
+    const fullscreenUrl = embedUrl.includes('?') 
+      ? `${embedUrl}&autoplay=1&autopause=0&controls=1&fullscreen=1`
+      : `${embedUrl}?autoplay=1&autopause=0&controls=1&fullscreen=1`;
+    
+    window.open(fullscreenUrl, '_blank');
   };
 
   const handleCloseVideo = () => {
@@ -190,26 +195,6 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
           </Tabs>
         )}
 
-        {/* Video Player Dialog */}
-        <Dialog open={!!selectedVideo} onOpenChange={handleCloseVideo}>
-          <DialogContent className="max-w-4xl w-full h-[80vh] p-0 bg-black border-slate-700">
-            <DialogHeader className="p-4 bg-slate-800">
-              <DialogTitle className="text-white">Support Video</DialogTitle>
-            </DialogHeader>
-            <div className="flex-1 p-4">
-              {selectedVideo && (
-                <iframe
-                  src={selectedVideo}
-                  className="w-full h-full rounded-lg"
-                  frameBorder="0"
-                  allow="autoplay; fullscreen; picture-in-picture"
-                  allowFullScreen
-                  title="Support Video"
-                />
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );

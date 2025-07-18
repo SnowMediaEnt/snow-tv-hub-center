@@ -183,13 +183,13 @@ const Index = () => {
       </div>
 
       {/* Header */}
-      <div className="relative z-10 pt-8 pb-4">
+      <div className="relative z-10 pt-16 pb-4">
         <div className="text-center">
           <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
             SNOW MEDIA CENTER
           </h1>
           {layoutMode === 'grid' && (
-            <p className="text-xl text-blue-200">TV Optimized Entertainment Hub</p>
+            <p className="text-xl text-blue-200">Your Premium Streaming Experience</p>
           )}
         </div>
       </div>
@@ -218,7 +218,7 @@ const Index = () => {
       <NewsTicker />
 
       {/* Main Content */}
-      <div className={`relative z-10 px-8 ${layoutMode === 'grid' ? 'flex flex-col justify-center pb-16 flex-1 pt-8' : 'flex flex-col justify-end pb-16 flex-1'}`}>
+      <div className={`relative z-10 px-8 ${layoutMode === 'grid' ? 'flex flex-col justify-end pb-8 flex-1' : 'flex flex-col justify-end pb-16 flex-1'}`}>
         <div className={layoutMode === 'grid' ? 'grid grid-cols-4 gap-8 max-w-6xl mx-auto' : 'flex gap-6 justify-center max-w-5xl mx-auto'}>
           {buttons.map((button, index) => {
             const Icon = button.icon;

@@ -30,6 +30,11 @@ const DownloadProgress = ({ app, onClose, onComplete }: DownloadProgressProps) =
         if (prev >= 100) {
           setIsComplete(true);
           clearInterval(interval);
+          // Auto-close after download completes
+          setTimeout(() => {
+            onComplete();
+            onClose();
+          }, 1500);
           return 100;
         }
         
@@ -49,7 +54,7 @@ const DownloadProgress = ({ app, onClose, onComplete }: DownloadProgressProps) =
     }, 500);
 
     return () => clearInterval(interval);
-  }, [app.size]);
+  }, [app.size, onComplete, onClose]);
 
   const handleInstall = () => {
     // Simulate installation
@@ -156,62 +161,10 @@ const DownloadProgress = ({ app, onClose, onComplete }: DownloadProgressProps) =
               <span className="font-medium">Download Complete!</span>
             </div>
             
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleInstall}
-                disabled={isInstalled}
-                className={`flex-1 ${isInstalled ? 'bg-gray-600' : 'bg-green-600 hover:bg-green-700'} text-white`}
-              >
-                <Package className="w-4 h-4 mr-2" />
-                {isInstalled ? 'Installed' : 'Install'}
-              </Button>
-              
-              {isInstalled && (
-                <Button 
-                  onClick={() => onComplete()}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Launch
-                </Button>
-              )}
+            <div className="text-center text-slate-300">
+              <p>File downloaded successfully!</p>
+              <p className="text-sm mt-1">Use the Install button from the main menu to install.</p>
             </div>
-            
-            {isInstalled && (
-              <div className="pt-4 border-t border-slate-700">
-                <p className="text-sm text-slate-300 mb-3">Troubleshooting:</p>
-                <div className="grid grid-cols-3 gap-2">
-                  <Button 
-                    onClick={handleClearCache}
-                    variant="outline"
-                    size="sm"
-                    className="bg-yellow-600/20 border-yellow-500/50 text-yellow-400 hover:bg-yellow-600/30"
-                  >
-                    <HardDrive className="w-3 h-3 mr-1" />
-                    Clear Cache
-                  </Button>
-                  
-                  <Button 
-                    onClick={handleClearData}
-                    variant="outline"
-                    size="sm"
-                    className="bg-orange-600/20 border-orange-500/50 text-orange-400 hover:bg-orange-600/30"
-                  >
-                    <Database className="w-3 h-3 mr-1" />
-                    Clear Data
-                  </Button>
-                  
-                  <Button 
-                    onClick={handleUninstall}
-                    variant="outline"
-                    size="sm"
-                    className="bg-red-600/20 border-red-500/50 text-red-400 hover:bg-red-600/30"
-                  >
-                    <Trash2 className="w-3 h-3 mr-1" />
-                    Uninstall
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </Card>
