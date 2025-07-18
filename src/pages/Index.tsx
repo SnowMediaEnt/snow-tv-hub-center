@@ -267,8 +267,8 @@ const Index = () => {
       <NewsTicker />
 
       {/* Main Content */}
-      <div className={`relative z-10 px-8 ${layoutMode === 'grid' ? 'flex flex-col justify-center items-center min-h-[calc(100vh-200px)] pt-32' : 'flex flex-col justify-end pb-16 flex-1'}`}>
-        <div className={layoutMode === 'grid' ? 'grid grid-cols-2 gap-8 max-w-4xl mx-auto' : 'flex gap-6 justify-center max-w-5xl mx-auto'}>
+      <div className={`relative z-10 px-8 ${layoutMode === 'grid' ? 'flex flex-col justify-center items-center min-h-[calc(100vh-200px)] pt-20' : 'flex flex-col justify-end pb-16 flex-1'}`}>
+        <div className={layoutMode === 'grid' ? 'grid grid-cols-2 gap-6 max-w-4xl mx-auto' : 'flex gap-6 justify-center max-w-5xl mx-auto'}>
           {buttons.map((button, index) => {
             const Icon = button.icon;
             const isFocused = focusedButton === index;
@@ -279,27 +279,25 @@ const Index = () => {
                 className={`
                   relative overflow-hidden cursor-pointer transition-all duration-300 transform
                   ${isFocused 
-                    ? 'scale-110 ring-4 ring-blue-400 shadow-2xl shadow-blue-500/25' 
-                    : 'hover:scale-105 shadow-lg'
+                    ? 'scale-105 ring-4 ring-white/40 shadow-2xl shadow-black/30' 
+                    : 'hover:scale-[1.02] shadow-xl'
                   }
-                  bg-gradient-to-br ${button.color} border-0 
-                  ${layoutMode === 'grid' ? 'h-48 aspect-[4/3]' : 'h-32 w-48'}
+                  bg-gradient-to-br ${button.color} border-0 rounded-2xl
+                  ${layoutMode === 'grid' ? 'h-52 aspect-[4/3]' : 'h-32 w-48'}
                 `}
                 onClick={() => handleButtonClick(index)}
               >
-                <div className="absolute inset-0 bg-black/20" />
-                <div className="relative z-10 p-3 h-full flex flex-col items-center justify-center text-center">
+                <div className="absolute inset-0 bg-black/10 rounded-2xl" />
+                <div className="relative z-10 p-6 h-full flex flex-col items-center justify-center text-center">
                   <Icon 
-                    size={layoutMode === 'grid' ? 56 : 48} 
-                    className={`${layoutMode === 'grid' ? 'mb-4' : 'mb-2'} transition-all duration-300 ${
-                      isFocused ? 'text-white scale-110' : 'text-white/90'
-                    }`} 
+                    size={layoutMode === 'grid' ? 64 : 48} 
+                    className={`${layoutMode === 'grid' ? 'mb-4' : 'mb-2'} transition-all duration-300 text-white drop-shadow-lg`} 
                   />
-                  <h3 className={`${layoutMode === 'grid' ? 'text-xl' : 'text-lg'} font-bold mb-2 text-white leading-tight`}>
+                  <h3 className={`${layoutMode === 'grid' ? 'text-xl' : 'text-lg'} font-bold mb-2 text-white leading-tight drop-shadow-md`}>
                     {button.title}
                   </h3>
                   {layoutMode === 'grid' && (
-                    <p className="text-base text-white/90 leading-tight">
+                    <p className="text-sm text-white/90 leading-tight drop-shadow-sm">
                       {button.description}
                     </p>
                   )}
@@ -307,7 +305,7 @@ const Index = () => {
                 
                 {/* Focus indicator */}
                 {isFocused && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20 animate-pulse" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/5 rounded-2xl animate-pulse" />
                 )}
               </Card>
             );
