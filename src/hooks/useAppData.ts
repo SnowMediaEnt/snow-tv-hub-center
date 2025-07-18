@@ -37,13 +37,20 @@ export const useAppData = () => {
       for (const proxyUrl of corsProxies) {
         try {
           console.log(`Trying proxy: ${proxyUrl}`);
+          
+          // Create AbortController for timeout (compatible with older browsers)
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          
           response = await fetch(proxyUrl, {
             method: 'GET',
             headers: {
               'Accept': 'application/json',
             },
-            signal: AbortSignal.timeout(10000) // 10 second timeout
+            signal: controller.signal
           });
+          
+          clearTimeout(timeoutId);
           
           if (response.ok) {
             console.log('Successfully connected via proxy');
