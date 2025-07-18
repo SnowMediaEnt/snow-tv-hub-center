@@ -144,11 +144,9 @@ const Index = () => {
 
   return (
     <div className={`min-h-screen text-white overflow-hidden relative ${layoutMode === 'row' ? 'flex flex-col' : ''}`}>
-      {/* Background Overlay for default gradient when no global background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900" />
-      
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
+      {/* Background Pattern - only visible when no global background is active */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 opacity-10" />
+      <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.1),transparent_50%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(56,189,248,0.05)_25%,rgba(56,189,248,0.05)_50%,transparent_50%,transparent_75%,rgba(56,189,248,0.05)_75%)] bg-[length:60px_60px]" />
       </div>

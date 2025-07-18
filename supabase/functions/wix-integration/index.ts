@@ -169,8 +169,12 @@ Deno.serve(async (req) => {
           })
         });
 
+        console.log('Cart API response status:', cartResponse.status);
         if (!cartResponse.ok) {
-          throw new Error(`Wix Cart API error: ${cartResponse.statusText}`);
+          const errorText = await cartResponse.text();
+          console.error('Cart API error:', errorText);
+          console.error('Cart Response headers:', Object.fromEntries(cartResponse.headers.entries()));
+          throw new Error(`Wix Cart API error: ${cartResponse.status} ${cartResponse.statusText} - ${errorText}`);
         }
 
         const cartData = await cartResponse.json();
