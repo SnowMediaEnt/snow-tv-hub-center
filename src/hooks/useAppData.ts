@@ -19,13 +19,47 @@ export const useAppData = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchApps = async () => {
+  const fetchApps = async (retryCount = 0) => {
     try {
       console.log('Fetching apps from endpoint...');
-      const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('http://104.168.157.178/apps/apps.json.php')}`);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Try multiple CORS proxies for better reliability
+      const corsProxies = [
+        `https://api.allorigins.win/raw?url=${encodeURIComponent('http://104.168.157.178/apps/apps.json.php')}`,
+        `https://corsproxy.io/?${encodeURIComponent('http://104.168.157.178/apps/apps.json.php')}`,
+        `https://cors-anywhere.herokuapp.com/http://104.168.157.178/apps/apps.json.php`
+      ];
+      
+      let response = null;
+      let lastError = null;
+      
+      // Try each proxy until one works
+      for (const proxyUrl of corsProxies) {
+        try {
+          console.log(`Trying proxy: ${proxyUrl}`);
+          response = await fetch(proxyUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+            },
+            signal: AbortSignal.timeout(10000) // 10 second timeout
+          });
+          
+          if (response.ok) {
+            console.log('Successfully connected via proxy');
+            break;
+          } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+        } catch (err) {
+          console.warn(`Proxy failed: ${proxyUrl}`, err);
+          lastError = err;
+          response = null;
+        }
+      }
+      
+      if (!response || !response.ok) {
+        throw new Error(lastError?.message || `All proxies failed`);
       }
       
       const data = await response.json();
@@ -67,7 +101,18 @@ export const useAppData = () => {
       setLoading(false);
     } catch (err) {
       console.error('Error fetching app data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch app data');
+      
+      // Retry logic - try up to 3 times with exponential backoff
+      if (retryCount < 3) {
+        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        console.log(`Retrying in ${delay}ms... (attempt ${retryCount + 1}/3)`);
+        setTimeout(() => {
+          fetchApps(retryCount + 1);
+        }, delay);
+        return;
+      }
+      
+      setError(err instanceof Error ? err.message : 'Load failed');
       setLoading(false);
     }
   };
