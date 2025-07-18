@@ -236,6 +236,29 @@ export const useWixIntegration = () => {
     }
   }, []);
 
+  const sendMessage = useCallback(async (subject: string, message: string, senderEmail: string, senderName?: string): Promise<{ success: boolean; message?: string }> => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('wix-integration', {
+        body: {
+          action: 'send-message',
+          subject,
+          message,
+          senderEmail,
+          senderName
+        }
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     loading,
     wixProfile,
@@ -248,6 +271,7 @@ export const useWixIntegration = () => {
     getProfile,
     getReferralInfo,
     addToEmailList,
+    sendMessage,
     fetchWixData
   };
 };

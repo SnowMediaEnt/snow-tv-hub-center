@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Send, User, MessageSquare, Brain, Loader2, Mic, MicOff } from 'lucide-react';
+import { ArrowLeft, Send, User, MessageSquare, Brain, Loader2, Mic, MicOff, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
+import { useWixIntegration } from '@/hooks/useWixIntegration';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ChatCommunityProps {
@@ -19,14 +20,17 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
   const [activeTab, setActiveTab] = useState<'admin' | 'community' | 'ai'>('admin');
   const [message, setMessage] = useState('');
   const [adminMessage, setAdminMessage] = useState('');
+  const [adminSubject, setAdminSubject] = useState('');
   const [aiMessage, setAiMessage] = useState('');
   const [aiChat, setAiChat] = useState<Array<{role: 'user' | 'ai', content: string, timestamp: Date}>>([]);
   const [aiLoading, setAiLoading] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   
   const { user } = useAuth();
   const { profile, checkCredits, deductCredits } = useUserProfile();
   const { toast } = useToast();
+  const { sendMessage } = useWixIntegration();
 
   const communityMessages = [
     { user: "TechUser2024", message: "Anyone know how to install Cinema HD?", time: "2 min ago" },
@@ -62,6 +66,57 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
         break;
       default:
         console.log('Unknown function:', name, args);
+    }
+  };
+
+  const sendAdminMessage = async () => {
+    if (!adminMessage.trim() || !adminSubject.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in both subject and message.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please sign in to send messages to admin.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAdminLoading(true);
+
+    try {
+      const result = await sendMessage(
+        adminSubject,
+        adminMessage,
+        user.email || '',
+        profile?.full_name || 'Snow Media User'
+      );
+
+      if (result.success) {
+        toast({
+          title: "Message sent!",
+          description: "Your message has been sent to Snow Media admin. You'll receive a response via email or phone alerts.",
+        });
+        setAdminMessage('');
+        setAdminSubject('');
+      } else {
+        throw new Error('Failed to send message');
+      }
+    } catch (error) {
+      console.error('Admin message error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again or contact support@snowmediaent.com.",
+        variant: "destructive",
+      });
+    } finally {
+      setAdminLoading(false);
     }
   };
 
@@ -196,15 +251,18 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
           <Card className="bg-gradient-to-br from-orange-900/30 to-slate-900 border-orange-700 p-6">
             <h3 className="text-2xl font-bold text-white mb-4">Send Private Message to Snow Media</h3>
             <p className="text-orange-200 mb-6">
-              Get direct support from the admin. Messages are private and secure.
+              Get direct support from the admin. Messages are sent via Wix - you'll get phone alerts and email notifications!
             </p>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-white font-semibold mb-2">Subject</label>
                 <Input 
+                  value={adminSubject}
+                  onChange={(e) => setAdminSubject(e.target.value)}
                   placeholder="What do you need help with?"
                   className="bg-slate-800 border-slate-600 text-white text-lg py-3"
+                  disabled={adminLoading}
                 />
               </div>
               
@@ -215,50 +273,76 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
                   onChange={(e) => setAdminMessage(e.target.value)}
                   placeholder="Describe your issue or question in detail..."
                   className="bg-slate-800 border-slate-600 text-white min-h-32 text-lg"
+                  disabled={adminLoading}
                 />
               </div>
               
-              <Button className="bg-orange-600 hover:bg-orange-700 text-white text-lg px-8 py-3">
-                <Send className="w-5 h-5 mr-2" />
-                Send to Snow Media
+              <Button 
+                onClick={sendAdminMessage}
+                disabled={adminLoading || !adminMessage.trim() || !adminSubject.trim() || !user}
+                className="bg-orange-600 hover:bg-orange-700 text-white text-lg px-8 py-3"
+              >
+                {adminLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5 mr-2" />
+                    Send to Snow Media
+                  </>
+                )}
               </Button>
+              
+              {!user && (
+                <p className="text-orange-300 text-sm mt-2">
+                  Please sign in to send messages to admin
+                </p>
+              )}
             </div>
           </Card>
         )}
 
-        {/* Community Chat */}
+        {/* Community Forum */}
         {activeTab === 'community' && (
           <div className="space-y-6">
             <Card className="bg-gradient-to-br from-green-900/30 to-slate-900 border-green-700 p-6">
-              <h3 className="text-2xl font-bold text-white mb-4">Community Chat</h3>
+              <h3 className="text-2xl font-bold text-white mb-4">Community Forum</h3>
+              <p className="text-green-200 mb-6">
+                Join our official Wix Groups forum to connect with other users, share tips, and get help from the community.
+              </p>
               
-              <div className="bg-slate-800 rounded-lg p-4 mb-4 max-h-80 overflow-y-auto">
-                {communityMessages.map((msg, index) => (
-                  <div key={index} className="mb-4 last:mb-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-green-400 font-semibold">{msg.user}</span>
-                      <span className="text-slate-400 text-sm">{msg.time}</span>
+              <div className="bg-slate-800 rounded-lg p-6 mb-6">
+                <h4 className="text-xl font-semibold text-white mb-4">Recent Forum Activity</h4>
+                <div className="space-y-3">
+                  {communityMessages.map((msg, index) => (
+                    <div key={index} className="border-l-4 border-green-500 pl-4 py-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-green-400 font-semibold">{msg.user}</span>
+                        <span className="text-slate-400 text-sm">{msg.time}</span>
+                      </div>
+                      <p className="text-white">{msg.message}</p>
                     </div>
-                    <p className="text-white">{msg.message}</p>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
               
               <div className="flex gap-4">
-                <Input 
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Type your message..."
-                  className="bg-slate-800 border-slate-600 text-white text-lg py-3 flex-1"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      // Handle send message
-                      setMessage('');
-                    }
-                  }}
-                />
-                <Button className="bg-green-600 hover:bg-green-700 text-white px-6 py-3">
-                  <Send className="w-5 h-5" />
+                <Button 
+                  onClick={() => window.open('https://snowmediaent.com/forum', '_blank')}
+                  className="bg-green-600 hover:bg-green-700 text-white text-lg px-8 py-3 flex-1"
+                >
+                  <ExternalLink className="w-5 h-5 mr-2" />
+                  Visit Community Forum
+                </Button>
+                <Button 
+                  onClick={() => window.open('https://snowmediaent.com/groups', '_blank')}
+                  variant="outline"
+                  className="border-green-500 text-green-400 hover:bg-green-600 hover:text-white text-lg px-8 py-3"
+                >
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  Join Groups
                 </Button>
               </div>
             </Card>

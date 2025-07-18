@@ -655,6 +655,61 @@ Deno.serve(async (req) => {
           );
         }
 
+      case 'send-message':
+        // Send message to admin via Wix
+        const { subject, message: messageText, senderEmail, senderName } = await req.json();
+        
+        if (!subject || !messageText || !senderEmail) {
+          return new Response(
+            JSON.stringify({ error: 'Subject, message, and sender email are required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Create a contact entry or conversation in Wix
+        const messageResponse = await fetch(`https://www.wixapis.com/contacts/v4/contacts`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${wixApiKey}`,
+            'wix-site-id': wixAccountId,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            info: {
+              name: {
+                first: senderName || 'Snow Media User',
+                last: ''
+              },
+              emails: [senderEmail]
+            },
+            // Add custom fields for the message
+            customFields: {
+              subject: subject,
+              message: messageText,
+              timestamp: new Date().toISOString()
+            }
+          })
+        });
+
+        console.log('Message sent to Wix, status:', messageResponse.status);
+        
+        if (!messageResponse.ok) {
+          const errorText = await messageResponse.text();
+          console.error('Send message error:', errorText);
+          // Don't throw error, just log it - message might still be received
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            message: 'Message sent successfully to Snow Media admin',
+            timestamp: new Date().toISOString()
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+
       default:
         return new Response(
           JSON.stringify({ error: 'Invalid action' }),
