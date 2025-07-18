@@ -76,7 +76,7 @@ const NewsTicker = () => {
   }, [newsItems.length, isLoading]);
 
   return (
-    <div className="relative z-10 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-y border-blue-400/30 py-3 overflow-hidden">
+    <div className="relative z-10 bg-gradient-to-r from-blue-600/60 to-purple-600/60 border-y border-blue-400/30 py-3 overflow-hidden">
       <div className="flex items-center justify-center">
         <div className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-bold mr-4">
           LIVE

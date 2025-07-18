@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Download, Play, Package, Smartphone, Tv, Settings, HardDrive, Database, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-// Removed DownloadProgress import - using real Android install process
+import DownloadProgress from './DownloadProgress';
 
 interface InstallAppsProps {
   onBack: () => void;
@@ -206,49 +206,41 @@ const apps: App[] = [
 
 const InstallApps = ({ onBack }: InstallAppsProps) => {
   const [downloadingApps, setDownloadingApps] = useState<Set<string>>(new Set());
+  const [downloadedApps, setDownloadedApps] = useState<Set<string>>(new Set());
   const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
+  const [currentDownload, setCurrentDownload] = useState<App | null>(null);
   const { toast } = useToast();
 
   const handleDownload = async (app: App) => {
+    setCurrentDownload(app);
     setDownloadingApps(prev => new Set(prev.add(app.id)));
     
-    try {
-      // Create download link that will trigger the actual download
-      const link = document.createElement('a');
-      link.href = app.downloadUrl;
-      link.download = `${app.name.replace(/\s+/g, '_')}.apk`;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Show success message
-      toast({
-        title: "Download Started",
-        description: `${app.name} is being downloaded. Check your Downloads folder and tap the APK to install.`,
-      });
-      
-      // After a short delay, remove the downloading state
-      setTimeout(() => {
-        setDownloadingApps(prev => {
-          const updated = new Set(prev);
-          updated.delete(app.id);
-          return updated;
-        });
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Download failed:', error);
+    // Start actual download
+    const link = document.createElement('a');
+    link.href = app.downloadUrl;
+    link.download = `${app.name.replace(/\s+/g, '_')}.apk`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Show progress modal - the DownloadProgress component will handle the simulation
+    // while the actual file downloads in background
+  };
+
+  const handleDownloadComplete = () => {
+    if (currentDownload) {
       setDownloadingApps(prev => {
         const updated = new Set(prev);
-        updated.delete(app.id);
+        updated.delete(currentDownload.id);
         return updated;
       });
+      setDownloadedApps(prev => new Set(prev.add(currentDownload.id)));
+      setCurrentDownload(null);
       
       toast({
-        title: "Download Failed",
-        description: "Please try again or check your internet connection.",
-        variant: "destructive",
+        title: "Download Complete",
+        description: "APK downloaded successfully! Click Install to proceed.",
       });
     }
   };
@@ -372,7 +364,8 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
   const renderAppGrid = (categoryApps: App[]) => (
     <div className="grid grid-cols-2 gap-6">
       {categoryApps.map((app) => {
-        const isDownloaded = downloadingApps.has(app.id);
+        const isDownloading = downloadingApps.has(app.id);
+        const isDownloaded = downloadedApps.has(app.id);
         const isInstalled = installedApps.has(app.id);
         
         return (
@@ -417,41 +410,47 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
               
               <div className="space-y-2">
                 <div className="flex gap-2">
+                  {/* Download Button - Only available if not downloading/downloaded/installed */}
                   <Button 
                     onClick={() => handleDownload(app)}
-                    disabled={isDownloaded || isInstalled}
-                    className={`flex-1 ${isDownloaded || isInstalled ? 'bg-gray-600' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+                    disabled={isDownloading || isDownloaded || isInstalled}
+                    className={`flex-1 ${isDownloading || isDownloaded || isInstalled ? 'bg-gray-600 text-gray-400' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    {isDownloaded ? 'Downloaded' : 'Download'}
+                    {isDownloading ? 'Downloading...' : isDownloaded ? 'Downloaded' : 'Download'}
                   </Button>
                   
+                  {/* Install Button - Only available after download completes */}
                   <Button 
                     onClick={() => handleInstall(app)}
                     disabled={!isDownloaded || isInstalled}
                     variant="outline"
-                    className={`${isInstalled ? 'bg-gray-600/20 border-gray-500/50 text-gray-400' : 'bg-green-600/20 border-green-500/50 text-green-400 hover:bg-green-600/30'}`}
+                    className={`${isDownloaded && !isInstalled ? 'bg-green-600/20 border-green-500/50 text-green-400 hover:bg-green-600/30' : 'bg-gray-600/20 border-gray-500/50 text-gray-400'}`}
                   >
                     <Package className="w-4 h-4 mr-2" />
                     {isInstalled ? 'Installed' : 'Install'}
                   </Button>
                   
+                  {/* Launch Button - Only available after install */}
                   <Button 
                     onClick={() => handleLaunch(app)}
+                    disabled={!isInstalled}
                     variant="outline"
-                    className={`${isInstalled ? 'bg-purple-600 border-purple-500 text-white hover:bg-purple-700' : 'bg-purple-600/20 border-purple-500/50 text-purple-400 hover:bg-purple-600/30'}`}
+                    className={`${isInstalled ? 'bg-purple-600 border-purple-500 text-white hover:bg-purple-700' : 'bg-gray-600/20 border-gray-500/50 text-gray-400'}`}
                   >
                     <Play className="w-4 h-4 mr-2" />
                     Launch
                   </Button>
                 </div>
                 
+                {/* Management buttons - Only available after install */}
                 <div className="flex gap-2">
                   <Button 
                     onClick={() => handleClearCache(app)}
+                    disabled={!isInstalled}
                     variant="outline"
                     size="sm"
-                    className="flex-1 bg-yellow-600/20 border-yellow-500/50 text-yellow-400 hover:bg-yellow-600/30"
+                    className={`flex-1 ${isInstalled ? 'bg-yellow-600/20 border-yellow-500/50 text-yellow-400 hover:bg-yellow-600/30' : 'bg-gray-600/20 border-gray-500/50 text-gray-400'}`}
                   >
                     <HardDrive className="w-3 h-3 mr-1" />
                     Clear Cache
@@ -459,9 +458,10 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
                   
                   <Button 
                     onClick={() => handleClearData(app)}
+                    disabled={!isInstalled}
                     variant="outline"
                     size="sm"
-                    className="flex-1 bg-orange-600/20 border-orange-500/50 text-orange-400 hover:bg-orange-600/30"
+                    className={`flex-1 ${isInstalled ? 'bg-orange-600/20 border-orange-500/50 text-orange-400 hover:bg-orange-600/30' : 'bg-gray-600/20 border-gray-500/50 text-gray-400'}`}
                   >
                     <Database className="w-3 h-3 mr-1" />
                     Clear Data
@@ -469,9 +469,10 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
                   
                   <Button 
                     onClick={() => handleUninstall(app)}
+                    disabled={!isInstalled}
                     variant="outline"
                     size="sm"
-                    className="flex-1 bg-red-600/20 border-red-500/50 text-red-400 hover:bg-red-600/30"
+                    className={`flex-1 ${isInstalled ? 'bg-red-600/20 border-red-500/50 text-red-400 hover:bg-red-600/30' : 'bg-gray-600/20 border-gray-500/50 text-gray-400'}`}
                   >
                     <Trash2 className="w-3 h-3 mr-1" />
                     Uninstall
@@ -531,7 +532,14 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
         </Tabs>
       </div>
 
-      {/* Using real Android install process - no modal needed */}
+      {/* Download Progress Modal */}
+      {currentDownload && (
+        <DownloadProgress 
+          app={currentDownload}
+          onClose={() => setCurrentDownload(null)}
+          onComplete={handleDownloadComplete}
+        />
+      )}
     </div>
   );
 };

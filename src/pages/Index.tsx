@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const [activeView, setActiveView] = useState<'home' | 'apps' | 'media' | 'news' | 'support' | 'chat' | 'settings' | 'user' | 'store' | 'community' | 'credits'>('home');
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [focusedButton, setFocusedButton] = useState(0);
   const [layoutMode, setLayoutMode] = useState<'grid' | 'row'>(() => {
     const saved = localStorage.getItem('snow-media-layout');
@@ -24,6 +25,14 @@ const Index = () => {
   });
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Update date/time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleLayoutChange = (newMode: 'grid' | 'row') => {
     setLayoutMode(newMode);
@@ -182,6 +191,26 @@ const Index = () => {
           {layoutMode === 'grid' && (
             <p className="text-xl text-blue-200">TV Optimized Entertainment Hub</p>
           )}
+        </div>
+      </div>
+
+      {/* Date/Time Display */}
+      <div className="absolute top-4 left-4 z-20 text-white">
+        <div className="bg-black/30 backdrop-blur-sm rounded-lg px-4 py-2">
+          <div className="text-lg font-bold">
+            {currentDateTime.toLocaleDateString('en-US', { 
+              weekday: 'short', 
+              month: 'short', 
+              day: 'numeric' 
+            })}
+          </div>
+          <div className="text-sm opacity-90">
+            {currentDateTime.toLocaleTimeString('en-US', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              second: '2-digit'
+            })}
+          </div>
         </div>
       </div>
 
