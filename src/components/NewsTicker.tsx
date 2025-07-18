@@ -49,7 +49,7 @@ const NewsTicker = () => {
         console.error('Error fetching RSS feed:', error);
         setNewsItems([
           "🚀 New streaming app update available",
-          "📺 Live support available now - Chat with Josh",
+          "📺 Live support available now - Chat with Snow Media",
           "🎬 Fresh video tutorials added to Support section",
           "💫 Snow Media Store updated with new content"
         ]);

@@ -124,7 +124,10 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
             <div className="space-y-6">
               <div>
                 <h1 className="text-4xl font-bold text-white mb-2">{selectedProduct.name}</h1>
-                <p className="text-xl text-blue-200">{selectedProduct.description}</p>
+                <div 
+                  className="text-xl text-blue-200" 
+                  dangerouslySetInnerHTML={{ __html: selectedProduct.description }}
+                />
               </div>
 
               <div className="flex items-center space-x-4">

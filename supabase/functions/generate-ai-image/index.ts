@@ -40,7 +40,7 @@ serve(async (req) => {
         prompt: enhancedPrompt,
         n: 1,
         size: size,
-        quality: 'hd',
+        quality: 'high',
         output_format: 'jpeg'
       }),
     });

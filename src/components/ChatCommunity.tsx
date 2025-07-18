@@ -18,7 +18,7 @@ const ChatCommunity = ({ onBack }: ChatCommunityProps) => {
   const communityMessages = [
     { user: "TechUser2024", message: "Anyone know how to install Cinema HD?", time: "2 min ago" },
     { user: "StreamFan", message: "Check the Install Apps section, works great!", time: "5 min ago" },
-    { user: "AndroidTVPro", message: "Josh added new tutorials today 🔥", time: "8 min ago" },
+    { user: "AndroidTVPro", message: "Snow Media added new tutorials today 🔥", time: "8 min ago" },
     { user: "MediaLover", message: "The new store update is amazing", time: "12 min ago" }
   ];
 
@@ -53,7 +53,7 @@ const ChatCommunity = ({ onBack }: ChatCommunityProps) => {
             }`}
           >
             <User className="w-5 h-5 mr-2" />
-            Message Josh (Admin)
+            Message Snow Media (Admin)
           </Button>
           <Button
             onClick={() => setActiveTab('community')}
@@ -72,7 +72,7 @@ const ChatCommunity = ({ onBack }: ChatCommunityProps) => {
         {/* Admin Chat */}
         {activeTab === 'admin' && (
           <Card className="bg-gradient-to-br from-orange-900/30 to-slate-900 border-orange-700 p-6">
-            <h3 className="text-2xl font-bold text-white mb-4">Send Private Message to Josh</h3>
+            <h3 className="text-2xl font-bold text-white mb-4">Send Private Message to Snow Media</h3>
             <p className="text-orange-200 mb-6">
               Get direct support from the admin. Messages are private and secure.
             </p>
@@ -98,7 +98,7 @@ const ChatCommunity = ({ onBack }: ChatCommunityProps) => {
               
               <Button className="bg-orange-600 hover:bg-orange-700 text-white text-lg px-8 py-3">
                 <Send className="w-5 h-5 mr-2" />
-                Send to Josh
+                Send to Snow Media
               </Button>
             </div>
           </Card>

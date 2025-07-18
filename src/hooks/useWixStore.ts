@@ -19,6 +19,7 @@ export interface WixProduct {
       description: string;
     }>;
   }>;
+  ribbon?: string;
 }
 
 export interface CartItem {
@@ -127,7 +128,8 @@ export const useWixStore = () => {
         images: product.media?.items?.map((item: any) => item.image?.url) || ['/placeholder.svg'],
         inStock: product.stock?.inStock !== false,
         inventory: product.stock?.quantity ? { quantity: product.stock.quantity } : undefined,
-        productOptions: product.productOptions || []
+        productOptions: product.productOptions || [],
+        ribbon: product.ribbon || product.customTextFields?.ribbon || ''
       }));
 
       setProducts(transformedProducts.length > 0 ? transformedProducts : mockProducts);
