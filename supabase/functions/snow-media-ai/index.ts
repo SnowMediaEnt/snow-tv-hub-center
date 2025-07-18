@@ -24,6 +24,30 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
+    // Fetch active knowledge documents for context
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.7.1');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    const supabase = createClient(supabaseUrl!, supabaseKey!);
+    
+    let knowledgeContext = '';
+    try {
+      const { data: docs, error } = await supabase
+        .from('knowledge_documents')
+        .select('title, description, content_preview, category')
+        .eq('is_active', true)
+        .limit(10);
+      
+      if (!error && docs) {
+        knowledgeContext = docs.map(doc => 
+          `Title: ${doc.title}\nCategory: ${doc.category}\nDescription: ${doc.description || 'N/A'}\nContent: ${doc.content_preview || 'See full document'}\n---`
+        ).join('\n\n');
+      }
+    } catch (error) {
+      console.log('Could not fetch knowledge documents:', error);
+    }
+
     // System prompt with Snow Media context and app control functions
     const systemPrompt = `You are Snow Media AI, an intelligent assistant for the Snow Media Center (SMC) Android app. You are knowledgeable about:
 
@@ -33,6 +57,8 @@ SNOW MEDIA KNOWLEDGE:
 - App installations, troubleshooting, and setup
 - Streaming services, IPTV, media content
 - Android TV devices, Fire TV, smart TV setup
+
+${knowledgeContext ? `\nKNOWLEDGE BASE DOCUMENTS:\n${knowledgeContext}\n` : ''}
 
 APP CONTROL FUNCTIONS:
 You can control the SMC app through function calls:
@@ -44,7 +70,7 @@ You can control the SMC app through function calls:
 
 IMPORTANT: All users are accessing you through the SMC Android app. Provide helpful, concise responses about snow media topics and offer to perform app actions when relevant.
 
-Be friendly, knowledgeable, and always ready to help with both snow media questions and app navigation.`;
+Be friendly, knowledgeable, and always ready to help with both snow media questions and app navigation. Use the knowledge base documents above to provide accurate, up-to-date information.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

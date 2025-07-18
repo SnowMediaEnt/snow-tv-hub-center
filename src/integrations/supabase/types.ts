@@ -179,6 +179,48 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_documents: {
+        Row: {
+          category: string | null
+          content_preview: string | null
+          created_at: string
+          description: string | null
+          file_path: string
+          file_type: string
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          category?: string | null
+          content_preview?: string | null
+          created_at?: string
+          description?: string | null
+          file_path: string
+          file_type: string
+          id?: string
+          is_active?: boolean
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string | null
+          content_preview?: string | null
+          created_at?: string
+          description?: string | null
+          file_path?: string
+          file_type?: string
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       media_assets: {
         Row: {
           asset_type: Database["public"]["Enums"]["asset_type"]
