@@ -40,7 +40,8 @@ serve(async (req) => {
         prompt: enhancedPrompt,
         n: 1,
         size: size,
-        quality: 'hd'
+        quality: 'hd',
+        response_format: 'b64_json'
       }),
     });
 
@@ -51,17 +52,33 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('OpenAI response received');
+    console.log('OpenAI response received:', JSON.stringify(data, null, 2));
 
-    if (!data.data || !data.data[0] || !data.data[0].b64_json) {
+    if (!data.data || !data.data[0]) {
+      console.error('Invalid response structure:', data);
       throw new Error('Invalid response format from OpenAI');
     }
 
-    const imageBase64 = data.data[0].b64_json;
+    const firstResult = data.data[0];
+    let imageData;
+    
+    // Handle both URL and base64 response formats
+    if (firstResult.b64_json) {
+      imageData = `data:image/png;base64,${firstResult.b64_json}`;
+    } else if (firstResult.url) {
+      // If we get a URL, we need to fetch it and convert to base64
+      const imageResponse = await fetch(firstResult.url);
+      const imageBuffer = await imageResponse.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+      imageData = `data:image/png;base64,${base64}`;
+    } else {
+      console.error('No image data found in response:', firstResult);
+      throw new Error('No image data found in OpenAI response');
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 
-      image: `data:image/jpeg;base64,${imageBase64}`,
+      image: imageData,
       prompt: prompt
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
