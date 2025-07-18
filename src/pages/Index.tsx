@@ -6,6 +6,8 @@ import { Package, Store, Video, MessageCircle, Settings as SettingsIcon, User, L
 import NewsTicker from '@/components/NewsTicker';
 import InstallApps from '@/components/InstallApps';
 import MediaStore from '@/components/MediaStore';
+import CommunityChat from '@/components/CommunityChat';
+import CreditStore from '@/components/CreditStore';
 import SupportVideos from '@/components/SupportVideos';
 import ChatCommunity from '@/components/ChatCommunity';
 import Settings from '@/components/Settings';
@@ -15,7 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
-  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<'home' | 'apps' | 'media' | 'news' | 'support' | 'chat' | 'settings' | 'user' | 'store' | 'community' | 'credits'>('home');
   const [focusedButton, setFocusedButton] = useState(0);
   const [layoutMode, setLayoutMode] = useState<'grid' | 'row'>(() => {
     const saved = localStorage.getItem('snow-media-layout');
@@ -33,7 +35,7 @@ const Index = () => {
   // Handle keyboard navigation for TV remote
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (activeSection) return; // Don't handle navigation when in a section
+      if (activeView !== 'home') return; // Don't handle navigation when in a section
       
       switch (event.key) {
         case 'ArrowRight':
@@ -70,8 +72,8 @@ const Index = () => {
           handleButtonClick(focusedButton);
           break;
         case 'Escape':
-          if (activeSection) {
-            setActiveSection(null);
+          if (activeView !== 'home') {
+            setActiveView('home');
           }
           break;
       }
@@ -79,11 +81,11 @@ const Index = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSection, focusedButton, layoutMode]);
+  }, [activeView, focusedButton, layoutMode]);
 
   const handleButtonClick = (index: number) => {
-    const sections = ['install-apps', 'media-store', 'support-videos', 'chat-community'];
-    setActiveSection(sections[index]);
+    const views: ('apps' | 'store' | 'support' | 'chat')[] = ['apps', 'store', 'support', 'chat'];
+    setActiveView(views[index]);
   };
 
   const buttons = [
@@ -113,21 +115,31 @@ const Index = () => {
     }
   ];
 
-  if (activeSection) {
+  if (activeView !== 'home') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-        {activeSection === 'install-apps' && <InstallApps onBack={() => setActiveSection(null)} />}
-        {activeSection === 'media-store' && <MediaStore onBack={() => setActiveSection(null)} />}
-        {activeSection === 'support-videos' && <SupportVideos onBack={() => setActiveSection(null)} />}
-        {activeSection === 'chat-community' && <ChatCommunity onBack={() => setActiveSection(null)} />}
-        {activeSection === 'settings' && (
+        {activeView === 'apps' && <InstallApps onBack={() => setActiveView('home')} />}
+        {activeView === 'store' && <MediaStore onBack={() => setActiveView('home')} />}
+        {activeView === 'support' && <SupportVideos onBack={() => setActiveView('home')} />}
+        {activeView === 'chat' && <ChatCommunity onBack={() => setActiveView('home')} />}
+        {activeView === 'community' && <CommunityChat onBack={() => setActiveView('home')} />}
+        {activeView === 'credits' && <CreditStore onBack={() => setActiveView('home')} />}
+        {activeView === 'settings' && (
           <Settings 
-            onBack={() => setActiveSection(null)} 
+            onBack={() => setActiveView('home')} 
             layoutMode={layoutMode}
             onLayoutChange={handleLayoutChange}
           />
         )}
-        {activeSection === 'dashboard' && <UserDashboard onBack={() => setActiveSection(null)} />}
+        {activeView === 'user' && (
+          <UserDashboard 
+            onViewChange={setActiveView}
+            onManageMedia={() => setActiveView('media')}
+            onViewSettings={() => setActiveView('settings')}
+            onCommunityChat={() => setActiveView('community')}
+            onCreditStore={() => setActiveView('credits')}
+          />
+        )}
       </div>
     );
   }
@@ -157,7 +169,7 @@ const Index = () => {
       <div className="absolute top-4 right-4 z-20 flex gap-2">
         {user ? (
           <Button
-            onClick={() => setActiveSection('dashboard')}
+            onClick={() => setActiveView('user')}
             variant="outline"
             size="sm"
             className="bg-green-600/20 border-green-500/50 text-white hover:bg-green-600/30"
@@ -177,7 +189,7 @@ const Index = () => {
           </Button>
         )}
         <Button
-          onClick={() => setActiveSection('settings')}
+          onClick={() => setActiveView('settings')}
           variant="outline"
           size="sm"
           className="bg-white/10 border-white/20 text-white hover:bg-white/20"

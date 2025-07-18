@@ -42,16 +42,17 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
     return products.filter(product => {
       const name = product.name.toLowerCase();
       const description = product.description.toLowerCase();
+      const category = (product as any).ribbon?.toLowerCase() || '';
       
       switch (selectedCategory) {
         case 'Devices':
-          return name.includes('device') || name.includes('box') || name.includes('stick') || name.includes('player') || name.includes('tablet') || name.includes('phone');
+          return category.includes('device') || name.includes('device') || name.includes('box') || name.includes('stick') || name.includes('player') || name.includes('tablet') || name.includes('phone') || name.includes('x96') || name.includes('android');
         case 'Services':
-          return name.includes('service') || name.includes('subscription') || name.includes('setup') || name.includes('installation') || name.includes('support');
+          return category.includes('service') || name.includes('service') || name.includes('subscription') || name.includes('setup') || name.includes('installation') || name.includes('support') || name.includes('connection') || name.includes('backup');
         case 'Accessories':
-          return name.includes('cable') || name.includes('remote') || name.includes('adapter') || name.includes('case') || name.includes('accessory') || name.includes('mount');
+          return category.includes('accessory') || name.includes('cable') || name.includes('remote') || name.includes('adapter') || name.includes('case') || name.includes('accessory') || name.includes('mount');
         case 'Support Tools':
-          return name.includes('tool') || name.includes('software') || name.includes('guide') || name.includes('tutorial') || name.includes('help');
+          return category.includes('support') || name.includes('tool') || name.includes('software') || name.includes('guide') || name.includes('tutorial') || name.includes('help') || name.includes('credit');
         default:
           return true;
       }
@@ -67,7 +68,8 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
         productId: item.id,
         quantity: item.cartQuantity,
         name: item.name,
-        price: item.price
+        price: item.price,
+        image: item.images?.[0] || ''
       }));
 
       const { checkoutUrl } = await createCart(wixCartItems);
@@ -142,15 +144,23 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
               {selectedProduct.productOptions && selectedProduct.productOptions.length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-3">Product Options:</h3>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {selectedProduct.productOptions.map((option, index) => (
-                      <div key={index}>
-                        <span className="text-white/70 text-sm font-medium">{option.name}:</span>
-                        <div className="flex flex-wrap gap-2 mt-1">
+                      <div key={index} className="bg-white/5 p-4 rounded-lg">
+                        <label className="text-white font-medium mb-2 block">{option.name}:</label>
+                        <div className="grid grid-cols-2 gap-2">
                           {option.choices.map((choice, choiceIndex) => (
-                            <Badge key={choiceIndex} variant="secondary" className="bg-blue-600/20 text-blue-300">
+                            <button
+                              key={choiceIndex}
+                              className="bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 p-2 rounded text-sm transition-colors"
+                            >
                               {choice.value}
-                            </Badge>
+                              {(choice as any).priceModifier && (
+                                <span className="text-xs ml-1">
+                                  ({(choice as any).priceModifier > 0 ? '+' : ''}${(choice as any).priceModifier.toFixed(2)})
+                                </span>
+                              )}
+                            </button>
                           ))}
                         </div>
                       </div>
@@ -410,9 +420,10 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
                           onClick={() => setSelectedProduct(product)}>
                         {product.name}
                       </h3>
-                      <p className="text-white/70 text-sm mb-3 line-clamp-2">
-                        {product.description}
-                      </p>
+                       <div 
+                         className="text-white/70 text-sm mb-3 line-clamp-2"
+                         dangerouslySetInnerHTML={{ __html: product.description }}
+                       />
                       
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-2">

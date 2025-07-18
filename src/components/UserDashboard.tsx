@@ -2,16 +2,20 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Wallet, CreditCard, History, User, LogOut, Plus } from 'lucide-react';
+import { ArrowLeft, Wallet, CreditCard, History, User, LogOut, Plus, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserDashboardProps {
-  onBack: () => void;
+  onViewChange: (view: 'home' | 'apps' | 'media' | 'news' | 'support' | 'chat' | 'settings' | 'user' | 'store' | 'community' | 'credits') => void;
+  onManageMedia: () => void;
+  onViewSettings: () => void;
+  onCommunityChat: () => void;
+  onCreditStore: () => void;
 }
 
-const UserDashboard = ({ onBack }: UserDashboardProps) => {
+const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunityChat, onCreditStore }: UserDashboardProps) => {
   const { user, signOut } = useAuth();
   const { profile, transactions, loading } = useUserProfile();
   const { toast } = useToast();
@@ -30,7 +34,7 @@ const UserDashboard = ({ onBack }: UserDashboardProps) => {
         title: "Signed out",
         description: "You have been successfully signed out.",
       });
-      onBack();
+      onViewChange('home');
     }
   };
 
@@ -52,7 +56,7 @@ const UserDashboard = ({ onBack }: UserDashboardProps) => {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center">
             <Button 
-              onClick={onBack}
+              onClick={() => onViewChange('home')}
               variant="outline" 
               size="lg"
               className="mr-6 bg-blue-600 border-blue-500 text-white hover:bg-blue-700"
@@ -111,12 +115,21 @@ const UserDashboard = ({ onBack }: UserDashboardProps) => {
         {/* Action Buttons */}
         <div className="flex gap-4 mb-8">
           <Button 
-            onClick={() => setShowPurchase(true)}
+            onClick={onCreditStore}
             size="lg"
             className="bg-green-600 hover:bg-green-700 text-white"
           >
             <Plus className="w-5 h-5 mr-2" />
             Purchase Credits
+          </Button>
+          <Button 
+            onClick={onCommunityChat}
+            size="lg"
+            variant="outline"
+            className="bg-blue-600/20 border-blue-500/50 text-white hover:bg-blue-600/30"
+          >
+            <MessageCircle className="w-5 h-5 mr-2" />
+            Community Chat
           </Button>
         </div>
 
@@ -174,26 +187,6 @@ const UserDashboard = ({ onBack }: UserDashboardProps) => {
             </div>
           )}
         </Card>
-
-        {/* Purchase Credits Modal - Placeholder */}
-        {showPurchase && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <Card className="bg-gradient-to-br from-blue-600 to-blue-800 border-blue-500 p-6 max-w-md w-full mx-4">
-              <h3 className="text-2xl font-bold text-white mb-4">Purchase Credits</h3>
-              <p className="text-blue-200 mb-4">
-                PayPal integration coming soon! For now, contact support to add credits to your account.
-              </p>
-              <div className="flex gap-2">
-                <Button 
-                  onClick={() => setShowPurchase(false)}
-                  className="flex-1 bg-slate-600 hover:bg-slate-700"
-                >
-                  Close
-                </Button>
-              </div>
-            </Card>
-          </div>
-        )}
       </div>
     </div>
   );
