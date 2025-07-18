@@ -44,33 +44,82 @@ const Index = () => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (activeView !== 'home') return; // Don't handle navigation when in a section
       
-      switch (event.key) {
-        case 'ArrowRight':
-          event.preventDefault();
-          setFocusedButton((prev) => (prev + 1) % 4);
-          break;
-        case 'ArrowLeft':
-          event.preventDefault();
-          setFocusedButton((prev) => (prev - 1 + 4) % 4);
-          break;
-        case 'ArrowDown':
-          event.preventDefault();
-          // No vertical navigation needed for single row
-          break;
-        case 'ArrowUp':
-          event.preventDefault();
-          // No vertical navigation needed for single row
-          break;
-        case 'Enter':
-        case ' ':
-          event.preventDefault();
-          handleButtonClick(focusedButton);
-          break;
-        case 'Escape':
-          if (activeView !== 'home') {
-            setActiveView('home');
-          }
-          break;
+      if (layoutMode === 'grid') {
+        // 2x2 grid navigation
+        switch (event.key) {
+          case 'ArrowRight':
+            event.preventDefault();
+            setFocusedButton((prev) => {
+              if (prev === 0) return 1; // Top row: left to right
+              if (prev === 1) return 0; // Top row: right to left (wrap)
+              if (prev === 2) return 3; // Bottom row: left to right
+              if (prev === 3) return 2; // Bottom row: right to left (wrap)
+              return prev;
+            });
+            break;
+          case 'ArrowLeft':
+            event.preventDefault();
+            setFocusedButton((prev) => {
+              if (prev === 0) return 1; // Top row: left to right (wrap)
+              if (prev === 1) return 0; // Top row: right to left
+              if (prev === 2) return 3; // Bottom row: left to right (wrap)
+              if (prev === 3) return 2; // Bottom row: right to left
+              return prev;
+            });
+            break;
+          case 'ArrowDown':
+            event.preventDefault();
+            setFocusedButton((prev) => {
+              if (prev === 0) return 2; // Top left to bottom left
+              if (prev === 1) return 3; // Top right to bottom right
+              if (prev === 2) return 0; // Bottom left to top left (wrap)
+              if (prev === 3) return 1; // Bottom right to top right (wrap)
+              return prev;
+            });
+            break;
+          case 'ArrowUp':
+            event.preventDefault();
+            setFocusedButton((prev) => {
+              if (prev === 0) return 2; // Top left to bottom left (wrap)
+              if (prev === 1) return 3; // Top right to bottom right (wrap)
+              if (prev === 2) return 0; // Bottom left to top left
+              if (prev === 3) return 1; // Bottom right to top right
+              return prev;
+            });
+            break;
+          case 'Enter':
+          case ' ':
+            event.preventDefault();
+            handleButtonClick(focusedButton);
+            break;
+          case 'Escape':
+            if (activeView !== 'home') {
+              setActiveView('home');
+            }
+            break;
+        }
+      } else {
+        // Row layout navigation (original)
+        switch (event.key) {
+          case 'ArrowRight':
+            event.preventDefault();
+            setFocusedButton((prev) => (prev + 1) % 4);
+            break;
+          case 'ArrowLeft':
+            event.preventDefault();
+            setFocusedButton((prev) => (prev - 1 + 4) % 4);
+            break;
+          case 'Enter':
+          case ' ':
+            event.preventDefault();
+            handleButtonClick(focusedButton);
+            break;
+          case 'Escape':
+            if (activeView !== 'home') {
+              setActiveView('home');
+            }
+            break;
+        }
       }
     };
 
@@ -219,7 +268,7 @@ const Index = () => {
 
       {/* Main Content */}
       <div className={`relative z-10 px-8 ${layoutMode === 'grid' ? 'flex flex-col justify-end pb-8 flex-1' : 'flex flex-col justify-end pb-16 flex-1'}`}>
-        <div className={layoutMode === 'grid' ? 'grid grid-cols-4 gap-8 max-w-6xl mx-auto' : 'flex gap-6 justify-center max-w-5xl mx-auto'}>
+        <div className={layoutMode === 'grid' ? 'grid grid-cols-2 gap-8 max-w-4xl mx-auto' : 'flex gap-6 justify-center max-w-5xl mx-auto'}>
           {buttons.map((button, index) => {
             const Icon = button.icon;
             const isFocused = focusedButton === index;
@@ -234,23 +283,23 @@ const Index = () => {
                     : 'hover:scale-105 shadow-lg'
                   }
                   bg-gradient-to-br ${button.color} border-0 
-                  ${layoutMode === 'grid' ? 'h-40 aspect-square' : 'h-32 w-48'}
+                  ${layoutMode === 'grid' ? 'h-48 aspect-[4/3]' : 'h-32 w-48'}
                 `}
                 onClick={() => handleButtonClick(index)}
               >
                 <div className="absolute inset-0 bg-black/20" />
                 <div className="relative z-10 p-3 h-full flex flex-col items-center justify-center text-center">
                   <Icon 
-                    size={layoutMode === 'grid' ? 48 : 48} 
-                    className={`${layoutMode === 'grid' ? 'mb-3' : 'mb-2'} transition-all duration-300 ${
+                    size={layoutMode === 'grid' ? 56 : 48} 
+                    className={`${layoutMode === 'grid' ? 'mb-4' : 'mb-2'} transition-all duration-300 ${
                       isFocused ? 'text-white scale-110' : 'text-white/90'
                     }`} 
                   />
-                  <h3 className={`${layoutMode === 'grid' ? 'text-lg' : 'text-lg'} font-bold mb-1 text-white leading-tight`}>
+                  <h3 className={`${layoutMode === 'grid' ? 'text-xl' : 'text-lg'} font-bold mb-2 text-white leading-tight`}>
                     {button.title}
                   </h3>
                   {layoutMode === 'grid' && (
-                    <p className="text-sm text-white/80 leading-tight">
+                    <p className="text-base text-white/90 leading-tight">
                       {button.description}
                     </p>
                   )}
