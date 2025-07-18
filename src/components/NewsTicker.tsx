@@ -83,10 +83,10 @@ const NewsTicker = () => {
         </div>
         <div className="flex-1 max-w-4xl">
           <div 
-            className="transition-all duration-500 ease-in-out text-center"
+            className="transition-all duration-500 ease-in-out text-center min-h-[2.5rem] flex items-center justify-center"
             key={currentIndex}
           >
-            <p className="text-xl text-white animate-fade-in">
+            <p className="text-xl text-white animate-fade-in line-clamp-2">
               {newsItems[currentIndex]}
             </p>
           </div>

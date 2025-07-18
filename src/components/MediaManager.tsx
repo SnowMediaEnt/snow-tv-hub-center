@@ -348,7 +348,7 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
         {/* Upload Section */}
         <Card className="bg-gradient-to-br from-blue-600 to-blue-800 border-blue-500 p-6 mb-8">
           <h2 className="text-2xl font-bold text-white mb-4">Upload New Asset</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-4">
             <div>
               <Label htmlFor="asset-type" className="text-white mb-2 block">Asset Type</Label>
               <Select value={uploadForm.assetType} onValueChange={(value) => setUploadForm({...uploadForm, assetType: value as MediaAsset['asset_type']})}>
@@ -362,33 +362,6 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="section" className="text-white mb-2 block">Section</Label>
-              <Select value={uploadForm.section} onValueChange={(value) => setUploadForm({...uploadForm, section: value})}>
-                <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="home">Home</SelectItem>
-                  <SelectItem value="apps">Apps</SelectItem>
-                  <SelectItem value="media-store">Media Store</SelectItem>
-                  <SelectItem value="videos">Videos</SelectItem>
-                  <SelectItem value="chat">Chat</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="md:col-span-2">
-              <Label htmlFor="description" className="text-white mb-2 block">Description (Optional)</Label>
-              <Input
-                id="description"
-                value={uploadForm.description}
-                onChange={(e) => setUploadForm({...uploadForm, description: e.target.value})}
-                placeholder="Brief description of the asset"
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/60"
-              />
             </div>
           </div>
           
@@ -428,9 +401,6 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
                       </div>
                       
                       <h4 className="text-lg font-bold text-white mb-2 truncate">{asset.name}</h4>
-                      {asset.description && (
-                        <p className="text-slate-400 text-sm mb-3 line-clamp-2">{asset.description}</p>
-                      )}
                       
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">

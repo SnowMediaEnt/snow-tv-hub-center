@@ -30,15 +30,11 @@ export const useDynamicBackground = (section: string = 'home') => {
 
     updateBackground();
 
-    // Check for new backgrounds every 3 seconds
-    const refreshInterval = setInterval(updateBackground, 3000);
-
     // Listen for immediate refresh events
     const handleBackgroundRefresh = () => updateBackground();
     window.addEventListener('backgroundRefresh', handleBackgroundRefresh);
 
     return () => {
-      clearInterval(refreshInterval);
       window.removeEventListener('backgroundRefresh', handleBackgroundRefresh);
     };
   }, [section, getActiveAssets, getAssetUrl, rotationIndex]);

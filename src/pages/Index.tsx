@@ -154,8 +154,8 @@ const Index = () => {
         backgroundRepeat: 'no-repeat'
       } : {}}
     >
-      {/* Background Overlay - darker when custom background is used */}
-      <div className={`absolute inset-0 ${hasBackground ? 'bg-black/30' : 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900'}`} />
+      {/* Background Overlay - lighter when custom background is used for readability */}
+      <div className={`absolute inset-0 ${hasBackground ? 'bg-black/20' : 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900'}`} />
       
       {/* Background Pattern - only show when no custom background */}
       {!hasBackground && (

@@ -219,7 +219,7 @@ const Auth = () => {
                       value={loginForm.email}
                       onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
                       placeholder="Enter your email"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                      className="pl-10 bg-white/10 border-white/20 text-black placeholder:text-gray-600"
                       required
                     />
                   </div>
@@ -235,7 +235,7 @@ const Auth = () => {
                       value={loginForm.password}
                       onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
                       placeholder="Enter your password"
-                      className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                      className="pl-10 pr-10 bg-white/10 border-white/20 text-black placeholder:text-gray-600"
                       required
                     />
                     <button
@@ -279,7 +279,7 @@ const Auth = () => {
                       value={signupForm.fullName}
                       onChange={(e) => setSignupForm({...signupForm, fullName: e.target.value})}
                       placeholder="Enter your full name"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                      className="pl-10 bg-white/10 border-white/20 text-black placeholder:text-gray-600"
                     />
                   </div>
                 </div>
@@ -294,7 +294,7 @@ const Auth = () => {
                       value={signupForm.email}
                       onChange={(e) => setSignupForm({...signupForm, email: e.target.value})}
                       placeholder="Enter your email"
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                      className="pl-10 bg-white/10 border-white/20 text-black placeholder:text-gray-600"
                       required
                     />
                   </div>
@@ -310,7 +310,7 @@ const Auth = () => {
                       value={signupForm.password}
                       onChange={(e) => setSignupForm({...signupForm, password: e.target.value})}
                       placeholder="Create a password"
-                      className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                      className="pl-10 pr-10 bg-white/10 border-white/20 text-black placeholder:text-gray-600"
                       required
                     />
                     <button
@@ -333,7 +333,7 @@ const Auth = () => {
                       value={signupForm.confirmPassword}
                       onChange={(e) => setSignupForm({...signupForm, confirmPassword: e.target.value})}
                       placeholder="Confirm your password"
-                      className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                      className="pl-10 pr-10 bg-white/10 border-white/20 text-black placeholder:text-gray-600"
                       required
                     />
                     <button

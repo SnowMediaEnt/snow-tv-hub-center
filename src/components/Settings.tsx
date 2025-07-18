@@ -91,32 +91,6 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
                 </div>
               </div>
 
-              <div className="mt-8 p-4 bg-blue-900/50 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-2">Current Layout</h3>
-                <div className="bg-slate-800 p-4 rounded-lg">
-                  {layoutMode === 'grid' ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-blue-600 h-8 rounded flex items-center justify-center text-xs">Apps</div>
-                      <div className="bg-purple-600 h-8 rounded flex items-center justify-center text-xs">Store</div>
-                      <div className="bg-green-600 h-8 rounded flex items-center justify-center text-xs">Videos</div>
-                      <div className="bg-orange-600 h-8 rounded flex items-center justify-center text-xs">Chat</div>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <div className="bg-blue-600 h-8 w-16 rounded flex items-center justify-center text-xs">Apps</div>
-                      <div className="bg-purple-600 h-8 w-16 rounded flex items-center justify-center text-xs">Store</div>
-                      <div className="bg-green-600 h-8 w-16 rounded flex items-center justify-center text-xs">Videos</div>
-                      <div className="bg-orange-600 h-8 w-16 rounded flex items-center justify-center text-xs">Chat</div>
-                    </div>
-                  )}
-                </div>
-                <p className="text-blue-200 text-sm mt-2">
-                  {layoutMode === 'grid' 
-                    ? 'Grid layout shows all details and descriptions'
-                    : 'Row layout maximizes background visibility'
-                  }
-                </p>
-              </div>
             </Card>
           </TabsContent>
         </Tabs>
