@@ -166,16 +166,15 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
     try {
       setGenerating(true);
       
-      // Call our OpenAI edge function
-      const response = await fetch(`https://falmwzhvxoefvkfsiylp.supabase.co/functions/v1/generate-ai-image`, {
+      // Call our Hugging Face edge function
+      const response = await fetch(`https://falmwzhvxoefvkfsiylp.supabase.co/functions/v1/generate-hf-image`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhbG13emh2eG9lZnZrZnNpeWxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4MjIwNDMsImV4cCI6MjA2NzM5ODA0M30.I-YfvZxAuOvhehrdoZOgrANirZv0-ucGUKbW9gOfQak`
         },
         body: JSON.stringify({
-          prompt: generatePrompt,
-          size: imageConfig.size
+          prompt: generatePrompt
         })
       });
 
@@ -186,7 +185,7 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
 
       const result = await response.json();
       
-      if (!result.success) {
+      if (!result.image) {
         throw new Error(result.error || 'Generation failed');
       }
 
