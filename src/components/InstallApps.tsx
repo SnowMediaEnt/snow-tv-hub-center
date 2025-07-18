@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Download, Play, Package, Smartphone, Tv, Settings, HardDrive, Database, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import DownloadProgress from './DownloadProgress';
+// Removed DownloadProgress import - using real Android install process
 
 interface InstallAppsProps {
   onBack: () => void;
@@ -207,21 +207,50 @@ const apps: App[] = [
 const InstallApps = ({ onBack }: InstallAppsProps) => {
   const [downloadingApps, setDownloadingApps] = useState<Set<string>>(new Set());
   const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
-  const [currentDownload, setCurrentDownload] = useState<App | null>(null);
   const { toast } = useToast();
 
   const handleDownload = async (app: App) => {
-    setCurrentDownload(app);
     setDownloadingApps(prev => new Set(prev.add(app.id)));
     
-    // Create download link
-    const link = document.createElement('a');
-    link.href = app.downloadUrl;
-    link.download = `${app.name.replace(/\s+/g, '_')}.apk`;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      // Create download link that will trigger the actual download
+      const link = document.createElement('a');
+      link.href = app.downloadUrl;
+      link.download = `${app.name.replace(/\s+/g, '_')}.apk`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Show success message
+      toast({
+        title: "Download Started",
+        description: `${app.name} is being downloaded. Check your Downloads folder and tap the APK to install.`,
+      });
+      
+      // After a short delay, remove the downloading state
+      setTimeout(() => {
+        setDownloadingApps(prev => {
+          const updated = new Set(prev);
+          updated.delete(app.id);
+          return updated;
+        });
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Download failed:', error);
+      setDownloadingApps(prev => {
+        const updated = new Set(prev);
+        updated.delete(app.id);
+        return updated;
+      });
+      
+      toast({
+        title: "Download Failed",
+        description: "Please try again or check your internet connection.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleInstall = (app: App) => {
@@ -338,16 +367,7 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
     }
   };
 
-  const handleDownloadComplete = () => {
-    if (currentDownload) {
-      setDownloadingApps(prev => {
-        const updated = new Set(prev);
-        updated.delete(currentDownload.id);
-        return updated;
-      });
-      setCurrentDownload(null);
-    }
-  };
+  // Removed handleDownloadComplete - using real Android install process
 
   const renderAppGrid = (categoryApps: App[]) => (
     <div className="grid grid-cols-2 gap-6">
@@ -511,14 +531,7 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
         </Tabs>
       </div>
 
-      {/* Download Progress Modal */}
-      {currentDownload && (
-        <DownloadProgress 
-          app={currentDownload}
-          onClose={() => setCurrentDownload(null)}
-          onComplete={handleDownloadComplete}
-        />
-      )}
+      {/* Using real Android install process - no modal needed */}
     </div>
   );
 };

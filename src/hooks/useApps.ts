@@ -39,13 +39,42 @@ export const useApps = () => {
 
   const handleDownload = async (app: App) => {
     if (app.download_url) {
-      // Create a temporary link and trigger download
-      const link = document.createElement('a');
-      link.href = `http://${app.download_url}`;
-      link.download = `${app.name}.apk`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      try {
+        // Download the APK file
+        const response = await fetch(`http://${app.download_url}`);
+        const blob = await response.blob();
+        
+        // Create a blob URL
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Create a temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `${app.name}.apk`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the blob URL
+        URL.revokeObjectURL(blobUrl);
+        
+        // After download, try to open the file for installation
+        // This will trigger the Android system installer
+        setTimeout(() => {
+          const installIntent = `intent://install?package=${app.name.toLowerCase().replace(/\s+/g, '')}&url=${encodeURIComponent(blobUrl)}#Intent;scheme=file;type=application/vnd.android.package-archive;category=android.intent.category.DEFAULT;launchFlags=0x10000000;end`;
+          window.location.href = installIntent;
+        }, 1000);
+        
+      } catch (error) {
+        console.error('Download failed:', error);
+        // Fallback to simple link download
+        const link = document.createElement('a');
+        link.href = `http://${app.download_url}`;
+        link.download = `${app.name}.apk`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     }
   };
 
