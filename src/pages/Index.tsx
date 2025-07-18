@@ -12,7 +12,6 @@ import SupportVideos from '@/components/SupportVideos';
 import ChatCommunity from '@/components/ChatCommunity';
 import Settings from '@/components/Settings';
 import UserDashboard from '@/components/UserDashboard';
-import { useDynamicBackground } from '@/hooks/useDynamicBackground';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,7 +22,6 @@ const Index = () => {
     const saved = localStorage.getItem('snow-media-layout');
     return (saved as 'grid' | 'row') || 'grid';
   });
-  const { backgroundUrl, hasBackground } = useDynamicBackground('home');
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -117,7 +115,7 @@ const Index = () => {
 
   if (activeView !== 'home') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      <div className="min-h-screen">
         {activeView === 'apps' && <InstallApps onBack={() => setActiveView('home')} />}
         {activeView === 'store' && <MediaStore onBack={() => setActiveView('home')} />}
         {activeView === 'support' && <SupportVideos onBack={() => setActiveView('home')} />}
@@ -145,25 +143,15 @@ const Index = () => {
   }
 
   return (
-    <div 
-      className={`min-h-screen text-white overflow-hidden relative ${layoutMode === 'row' ? 'flex flex-col' : ''}`}
-      style={hasBackground ? {
-        backgroundImage: `url(${backgroundUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      } : {}}
-    >
-      {/* Background Overlay - lighter when custom background is used for readability */}
-      <div className={`absolute inset-0 ${hasBackground ? 'bg-black/20' : 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900'}`} />
+    <div className={`min-h-screen text-white overflow-hidden relative ${layoutMode === 'row' ? 'flex flex-col' : ''}`}>
+      {/* Background Overlay for default gradient when no global background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900" />
       
-      {/* Background Pattern - only show when no custom background */}
-      {!hasBackground && (
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.1),transparent_50%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(56,189,248,0.05)_25%,rgba(56,189,248,0.05)_50%,transparent_50%,transparent_75%,rgba(56,189,248,0.05)_75%)] bg-[length:60px_60px]" />
-        </div>
-      )}
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.1),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(56,189,248,0.05)_25%,rgba(56,189,248,0.05)_50%,transparent_50%,transparent_75%,rgba(56,189,248,0.05)_75%)] bg-[length:60px_60px]" />
+      </div>
 
       {/* User/Auth Controls */}
       <div className="absolute top-4 right-4 z-20 flex gap-2">

@@ -153,8 +153,8 @@ Deno.serve(async (req) => {
         );
 
       case 'create-cart':
-        // Create a cart in Wix using eCommerce API        
-        const cartResponse = await fetch(`https://www.wixapis.com/ecom/v1/carts`, {
+        // Create a cart in Wix using Stores API        
+        const cartResponse = await fetch(`https://www.wixapis.com/stores/v1/carts`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${wixApiKey}`,
@@ -163,10 +163,7 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             lineItems: items.map(item => ({
-              catalogReference: {
-                appId: "1380b703-ce81-ff05-f115-39571d94dfcd",
-                catalogItemId: item.productId
-              },
+              productId: item.productId,
               quantity: item.quantity
             }))
           })
