@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Download, Play, Package, Smartphone, Tv, Settings } from 'lucide-react';
+import { ArrowLeft, Download, Play, Package, Smartphone, Tv, Settings, HardDrive, Database, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import DownloadProgress from './DownloadProgress';
 
@@ -263,6 +263,69 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
     }
   };
 
+  const handleClearCache = (app: App) => {
+    // Android clear cache intent
+    const clearCacheIntent = `intent://${app.packageName}#Intent;scheme=package;action=android.settings.APPLICATION_DETAILS_SETTINGS;end`;
+    
+    try {
+      window.location.href = clearCacheIntent;
+      toast({
+        title: "Clearing App Cache",
+        description: `Opening settings to clear ${app.name} cache...`,
+      });
+    } catch (error) {
+      toast({
+        title: "Clear Cache Failed",
+        description: "Could not clear app cache. Please try manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleClearData = (app: App) => {
+    // Android clear data intent
+    const clearDataIntent = `intent://${app.packageName}#Intent;scheme=package;action=android.settings.APPLICATION_DETAILS_SETTINGS;end`;
+    
+    try {
+      window.location.href = clearDataIntent;
+      toast({
+        title: "Clearing App Data",
+        description: `Opening settings to clear ${app.name} data...`,
+      });
+    } catch (error) {
+      toast({
+        title: "Clear Data Failed",
+        description: "Could not clear app data. Please try manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUninstall = (app: App) => {
+    // Android uninstall intent
+    const uninstallIntent = `intent://uninstall?package=${app.packageName}#Intent;scheme=package;action=android.intent.action.DELETE;end`;
+    
+    try {
+      window.location.href = uninstallIntent;
+      setInstalledApps(prev => {
+        const updated = new Set(prev);
+        updated.delete(app.id);
+        return updated;
+      });
+      toast({
+        title: "Uninstalling App",
+        description: `${app.name} is being uninstalled...`,
+        variant: "destructive",
+      });
+    } catch (error) {
+      toast({
+        title: "Uninstall Failed",
+        description: "Could not uninstall the app. Please try manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getCategoryApps = (category: string) => {
     return apps.filter(app => category === 'featured' ? app.featured : app.category === category);
   };
@@ -332,34 +395,68 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
                 </div>
               </div>
               
-              <div className="flex gap-2">
-                <Button 
-                  onClick={() => handleDownload(app)}
-                  disabled={isDownloaded || isInstalled}
-                  className={`flex-1 ${isDownloaded || isInstalled ? 'bg-gray-600' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  {isDownloaded ? 'Downloaded' : 'Download'}
-                </Button>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => handleDownload(app)}
+                    disabled={isDownloaded || isInstalled}
+                    className={`flex-1 ${isDownloaded || isInstalled ? 'bg-gray-600' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    {isDownloaded ? 'Downloaded' : 'Download'}
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => handleInstall(app)}
+                    disabled={!isDownloaded || isInstalled}
+                    variant="outline"
+                    className={`${isInstalled ? 'bg-gray-600/20 border-gray-500/50 text-gray-400' : 'bg-green-600/20 border-green-500/50 text-green-400 hover:bg-green-600/30'}`}
+                  >
+                    <Package className="w-4 h-4 mr-2" />
+                    {isInstalled ? 'Installed' : 'Install'}
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => handleLaunch(app)}
+                    variant="outline"
+                    className={`${isInstalled ? 'bg-purple-600 border-purple-500 text-white hover:bg-purple-700' : 'bg-purple-600/20 border-purple-500/50 text-purple-400 hover:bg-purple-600/30'}`}
+                  >
+                    <Play className="w-4 h-4 mr-2" />
+                    Launch
+                  </Button>
+                </div>
                 
-                <Button 
-                  onClick={() => handleInstall(app)}
-                  disabled={!isDownloaded || isInstalled}
-                  variant="outline"
-                  className={`${isInstalled ? 'bg-gray-600/20 border-gray-500/50 text-gray-400' : 'bg-green-600/20 border-green-500/50 text-green-400 hover:bg-green-600/30'}`}
-                >
-                  <Package className="w-4 h-4 mr-2" />
-                  {isInstalled ? 'Installed' : 'Install'}
-                </Button>
-                
-                <Button 
-                  onClick={() => handleLaunch(app)}
-                  variant="outline"
-                  className={`${isInstalled ? 'bg-purple-600 border-purple-500 text-white hover:bg-purple-700' : 'bg-purple-600/20 border-purple-500/50 text-purple-400 hover:bg-purple-600/30'}`}
-                >
-                  <Play className="w-4 h-4 mr-2" />
-                  Launch
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => handleClearCache(app)}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 bg-yellow-600/20 border-yellow-500/50 text-yellow-400 hover:bg-yellow-600/30"
+                  >
+                    <HardDrive className="w-3 h-3 mr-1" />
+                    Clear Cache
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => handleClearData(app)}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 bg-orange-600/20 border-orange-500/50 text-orange-400 hover:bg-orange-600/30"
+                  >
+                    <Database className="w-3 h-3 mr-1" />
+                    Clear Data
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => handleUninstall(app)}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 bg-red-600/20 border-red-500/50 text-red-400 hover:bg-red-600/30"
+                  >
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    Uninstall
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>
