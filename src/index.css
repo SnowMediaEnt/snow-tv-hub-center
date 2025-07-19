@@ -14,9 +14,10 @@
     --brand-navy: 214 91% 15%; /* #092145 - Dark navy */
     --brand-purple: 296 89% 20%; /* #600468 - Purple */
     
-    /* Default blue background when no image selected */
-    --default-bg: 220 60% 25%; /* Nice blue gradient base */
-    --default-bg-secondary: 220 70% 35%;
+    /* Snowy white and blue background when no image selected */
+    --snow-blue: 220 60% 85%; /* Light snowy blue */
+    --snow-white: 0 0% 98%; /* Snow white */
+    --snow-blue-deep: 220 40% 70%; /* Deeper blue accent */
     
     /* Design System Colors using brand palette */
     --background: 0 0% 100%;
@@ -53,7 +54,7 @@
     --gradient-primary: linear-gradient(135deg, hsl(var(--brand-ice)), hsl(var(--brand-navy)));
     --gradient-secondary: linear-gradient(135deg, hsl(var(--brand-gold)), hsl(var(--brand-charcoal)));
     --gradient-accent: linear-gradient(135deg, hsl(var(--brand-purple)), hsl(var(--brand-ice)));
-    --gradient-default-bg: linear-gradient(135deg, hsl(var(--default-bg)), hsl(var(--default-bg-secondary)));
+    --gradient-snowy: linear-gradient(135deg, hsl(var(--snow-white)), hsl(var(--snow-blue)));
     
     /* Elegant shadows with brand colors */
     --shadow-brand: 0 10px 30px -10px hsl(var(--brand-ice) / 0.3);
@@ -123,24 +124,26 @@
 
 @layer components {
   /* Brand fonts */
-  .font-logo {
-    font-family: 'Quicksand', 'Nunito', sans-serif;
-    font-weight: 700;
+  .font-snow-media {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900; /* ExtraBold */
+  }
+  
+  .font-center {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500; /* Medium */
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
   }
   
   .font-nunito {
     font-family: 'Nunito', sans-serif;
   }
   
-  /* Enhanced card styles */
+  /* Simple card styles without animations */
   .card-polished {
-    @apply shadow-lg hover:shadow-xl transition-all duration-300;
+    @apply shadow-lg;
     box-shadow: var(--shadow-brand);
-  }
-  
-  .card-polished:hover {
-    box-shadow: var(--shadow-deep);
-    transform: translateY(-2px);
   }
   
   /* Glass effect */
@@ -163,8 +166,8 @@
     background: var(--gradient-accent);
   }
   
-  .bg-default-blue {
-    background: var(--gradient-default-bg);
+  .bg-snowy {
+    background: var(--gradient-snowy);
   }
   
   /* Enhanced text shadows */

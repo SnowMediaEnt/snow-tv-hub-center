@@ -21,7 +21,12 @@ export default {
 			fontFamily: {
 				'nunito': ['Nunito', 'sans-serif'],
 				'quicksand': ['Quicksand', 'sans-serif'],
-				'logo': ['Quicksand', 'Nunito', 'sans-serif'],
+				'montserrat': ['Montserrat', 'sans-serif'],
+				'poppins': ['Poppins', 'sans-serif'],
+				'roboto-condensed': ['Roboto Condensed', 'sans-serif'],
+				'raleway': ['Raleway', 'sans-serif'],
+				'snow-media': ['Montserrat', 'sans-serif'],
+				'center': ['Montserrat', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -119,21 +124,10 @@ export default {
 						opacity: '1'
 					}
 				},
-				'glow': {
-					'0%, 100%': {
-						boxShadow: '0 0 20px hsl(var(--brand-ice) / 0.3)'
-					},
-					'50%': {
-						boxShadow: '0 0 40px hsl(var(--brand-ice) / 0.6)'
-					}
-				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out',
-				'fade-in': 'fade-in 0.3s ease-out',
-				'scale-in': 'scale-in 0.2s ease-out',
-				'glow': 'glow 2s ease-in-out infinite'
+				'accordion-up': 'accordion-up 0.2s ease-out'
 			}
 		}
 	},

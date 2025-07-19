@@ -190,11 +190,11 @@ const Index = () => {
 
   return (
     <div className={`min-h-screen text-white overflow-hidden relative ${layoutMode === 'row' ? 'flex flex-col' : ''}`}>
-      {/* Background Pattern - only visible when no global background is active */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 opacity-10" />
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.1),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(56,189,248,0.05)_25%,rgba(56,189,248,0.05)_50%,transparent_50%,transparent_75%,rgba(56,189,248,0.05)_75%)] bg-[length:60px_60px]" />
+      {/* Subtle snowy background pattern - only visible when no global background is active */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-blue-100/30 to-blue-200/20" />
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.4),transparent_30%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(135,206,235,0.3),transparent_40%)]" />
       </div>
 
       {/* User/Auth Controls */}
@@ -214,7 +214,7 @@ const Index = () => {
             onClick={() => navigate('/auth')}
             variant="outline"
             size="sm"
-            className="glass-effect border-brand-gold/50 text-white hover:bg-brand-gold/20 font-quicksand font-semibold shadow-lg"
+            className="glass-effect border-brand-gold bg-brand-gold/90 text-brand-charcoal hover:bg-brand-gold font-quicksand font-semibold shadow-lg"
           >
             <LogIn className="w-4 h-4 mr-2" />
             Sign In
@@ -224,7 +224,7 @@ const Index = () => {
           onClick={() => setActiveView('settings')}
           variant="outline"
           size="sm"
-          className="glass-effect border-white/30 text-white hover:bg-white/20 font-quicksand font-semibold shadow-lg"
+          className="glass-effect border-brand-gold bg-brand-gold/90 text-brand-charcoal hover:bg-brand-gold font-quicksand font-semibold shadow-lg"
         >
           <SettingsIcon className="w-4 h-4 mr-2" />
           Settings
@@ -234,8 +234,10 @@ const Index = () => {
       {/* Header */}
       <div className="relative z-10 pt-16 pb-4">
         <div className="text-center">
-          <h1 className="text-6xl font-logo font-bold bg-gradient-to-r from-brand-ice to-brand-gold bg-clip-text text-transparent mb-2 text-shadow-strong">
-            SNOW MEDIA CENTER
+          <h1 className="text-6xl mb-2 text-shadow-strong">
+            <span className="font-snow-media text-brand-navy">SNOW MEDIA</span>
+            <span className="text-2xl"> </span>
+            <span className="font-center text-brand-charcoal">CENTER</span>
           </h1>
           {layoutMode === 'grid' && (
             <p className="text-xl text-brand-ice/90 font-nunito font-medium text-shadow-soft">Your Premium Streaming Experience</p>
@@ -277,10 +279,10 @@ const Index = () => {
               <Card
                 key={index}
                 className={`
-                  relative overflow-hidden cursor-pointer transition-all duration-500 transform
+                  relative overflow-hidden cursor-pointer
                   ${isFocused 
-                    ? 'scale-110 ring-4 ring-brand-ice/60 shadow-2xl animate-glow' 
-                    : 'hover:scale-105 shadow-xl hover:shadow-2xl'
+                    ? 'ring-4 ring-brand-ice/60 shadow-2xl' 
+                    : 'shadow-xl'
                   }
                   bg-gradient-to-br ${button.color} border-0 rounded-3xl
                   ${layoutMode === 'grid' ? 'h-52 aspect-[4/3]' : 'h-32 w-48'}
@@ -293,10 +295,10 @@ const Index = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-3xl" />
                 
                 <div className="relative z-10 p-6 h-full flex flex-col items-center justify-center text-center">
-                  <Icon 
-                    size={layoutMode === 'grid' ? 64 : 48} 
-                    className={`${layoutMode === 'grid' ? 'mb-4' : 'mb-2'} transition-all duration-500 text-white drop-shadow-xl filter ${isFocused ? 'animate-pulse' : ''}`} 
-                  />
+                   <Icon 
+                     size={layoutMode === 'grid' ? 64 : 48} 
+                     className={`${layoutMode === 'grid' ? 'mb-4' : 'mb-2'} text-white drop-shadow-xl filter`} 
+                   />
                   <h3 className={`${layoutMode === 'grid' ? 'text-xl' : 'text-lg'} font-bold mb-2 text-white leading-tight text-shadow-strong font-quicksand`}>
                     {button.title}
                   </h3>
@@ -307,9 +309,9 @@ const Index = () => {
                   )}
                 </div>
                 
-                {/* Enhanced focus indicator with glow */}
+                {/* Focus indicator */}
                 {isFocused && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-brand-ice/20 to-brand-gold/20 rounded-3xl animate-pulse" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-brand-ice/20 to-brand-gold/20 rounded-3xl" />
                 )}
               </Card>
             );
