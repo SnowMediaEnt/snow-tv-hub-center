@@ -167,7 +167,7 @@ Be friendly, knowledgeable, and always ready to help with both snow media questi
     return new Response(JSON.stringify({ 
       message: aiMessage.content,
       functionCall,
-      usage: data.usage
+      usage: data.usage || { total_tokens: 0 }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

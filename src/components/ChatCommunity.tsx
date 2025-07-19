@@ -370,7 +370,7 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
               <p className="text-purple-200 mb-6">
                 Ask me about snow media, streaming apps, or get help with your SMC app. I can also navigate you to different sections!
                 <br />
-                <span className="text-sm text-purple-300">Cost: 0.01 credits per message</span>
+                <span className="text-sm text-purple-300">Cost: 0.02 credits per 1,000 tokens (minimum 0.02 credits)</span>
               </p>
               
               {/* AI Chat Messages */}
