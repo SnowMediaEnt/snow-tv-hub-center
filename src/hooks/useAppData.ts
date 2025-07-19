@@ -25,13 +25,18 @@ export const useAppData = () => {
       
       // Try multiple endpoints and proxies
       const endpoints = [
-        // Try direct JSON file first
+        // Try direct access first (might work in some environments)
+        'http://104.168.157.178/apps/apps.json',
+        'http://104.168.157.178/apps/apps.json.php',
+        // Try different CORS proxies
+        `https://api.allorigins.win/get?url=${encodeURIComponent('http://104.168.157.178/apps/apps.json')}`,
         `https://api.allorigins.win/raw?url=${encodeURIComponent('http://104.168.157.178/apps/apps.json')}`,
-        // Then try PHP file
+        `https://api.allorigins.win/get?url=${encodeURIComponent('http://104.168.157.178/apps/apps.json.php')}`,
         `https://api.allorigins.win/raw?url=${encodeURIComponent('http://104.168.157.178/apps/apps.json.php')}`,
-        // Try different proxy
         `https://corsproxy.io/?${encodeURIComponent('http://104.168.157.178/apps/apps.json')}`,
-        `https://corsproxy.io/?${encodeURIComponent('http://104.168.157.178/apps/apps.json.php')}`
+        `https://corsproxy.io/?${encodeURIComponent('http://104.168.157.178/apps/apps.json.php')}`,
+        `https://thingproxy.freeboard.io/fetch/http://104.168.157.178/apps/apps.json`,
+        `https://thingproxy.freeboard.io/fetch/http://104.168.157.178/apps/apps.json.php`
       ];
       
       let response = null;
