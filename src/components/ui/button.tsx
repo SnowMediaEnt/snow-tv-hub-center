@@ -22,7 +22,8 @@ const buttonVariants = cva(
         blue: "text-white shadow-md hover:shadow-lg" + " " + "[background:var(--gradient-blue)]",
         silver: "text-gray-800 shadow-md hover:shadow-lg" + " " + "[background:var(--gradient-silver)]",
         purple: "text-white shadow-md hover:shadow-lg" + " " + "[background:var(--gradient-purple)]",
-        orange: "text-white shadow-md hover:shadow-lg" + " " + "[background:var(--gradient-orange)]",
+        navy: "text-white shadow-md hover:shadow-lg" + " " + "[background:var(--gradient-navy)]",
+        white: "text-gray-800 shadow-md hover:shadow-lg" + " " + "[background:var(--gradient-white)]",
       },
       size: {
         default: "h-10 px-4 py-2",

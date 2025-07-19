@@ -61,7 +61,8 @@
     --gradient-blue: linear-gradient(135deg, #87ceeb, #4682b4);
     --gradient-silver: linear-gradient(135deg, #e5e5e5, #a9a9a9);
     --gradient-purple: linear-gradient(135deg, #9370db, #663399);
-    --gradient-orange: linear-gradient(135deg, #ffa500, #ff6347);
+    --gradient-navy: linear-gradient(135deg, #092145, #0a2a5a);
+    --gradient-white: linear-gradient(135deg, #ffffff, #f8f9fa);
     
     /* Elegant shadows with brand colors */
     --shadow-brand: 0 10px 30px -10px hsl(var(--brand-ice) / 0.3);

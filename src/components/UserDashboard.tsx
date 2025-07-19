@@ -67,14 +67,14 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
           <div className="flex items-center">
             <Button 
               onClick={() => onViewChange('home')}
-              variant="outline" 
+              variant="gold" 
               size="lg"
-              className="mr-6 bg-blue-600 border-blue-500 text-white hover:bg-blue-700"
+              className="mr-6"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
               Back to Home
             </Button>
-            <div>
+            <div className="text-center">
               <h1 className="text-4xl font-bold text-white mb-2">Your Dashboard</h1>
               <p className="text-xl text-blue-200">Welcome back, {profile?.full_name || user?.email}</p>
             </div>
@@ -145,17 +145,17 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
 
         {/* Dashboard Tabs */}
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8 bg-slate-800">
-            <TabsTrigger value="overview" className="text-white data-[state=active]:bg-blue-600">
+          <TabsList className="grid w-full grid-cols-4 mb-8 bg-slate-800/50 border-slate-600">
+            <TabsTrigger value="overview" className="text-white data-[state=active]:bg-brand-gold text-center">
               Overview
             </TabsTrigger>
-            <TabsTrigger value="credits" className="text-white data-[state=active]:bg-blue-600">
+            <TabsTrigger value="credits" className="text-white data-[state=active]:bg-brand-gold text-center">
               App Credits
             </TabsTrigger>
-            <TabsTrigger value="store" className="text-white data-[state=active]:bg-blue-600">
+            <TabsTrigger value="store" className="text-white data-[state=active]:bg-brand-gold text-center">
               Store Account
             </TabsTrigger>
-            <TabsTrigger value="referrals" className="text-white data-[state=active]:bg-blue-600">
+            <TabsTrigger value="referrals" className="text-white data-[state=active]:bg-brand-gold text-center">
               Referrals
             </TabsTrigger>
           </TabsList>

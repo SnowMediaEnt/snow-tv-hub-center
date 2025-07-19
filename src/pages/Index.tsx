@@ -155,7 +155,7 @@ const Index = () => {
       icon: MessageCircle,
       title: 'Chat & Community',
       description: 'Connect with Admin & Users',
-      variant: 'orange' as const
+      variant: 'navy' as const
     }
   ];
 
@@ -202,11 +202,11 @@ const Index = () => {
         {user ? (
           <Button
             onClick={() => setActiveView('user')}
-            variant="blue"
+            variant="white"
             size="sm"
           >
-            <User className="w-4 h-4 mr-2" />
-            Dashboard
+            <User className="w-4 h-4 mr-2 text-gray-800" />
+            <span className="text-gray-800">Dashboard</span>
           </Button>
         ) : (
           <Button
@@ -220,7 +220,7 @@ const Index = () => {
         )}
         <Button
           onClick={() => setActiveView('settings')}
-          variant="silver"
+          variant="gold"
           size="sm"
         >
           <SettingsIcon className="w-4 h-4 mr-2" />
@@ -244,7 +244,7 @@ const Index = () => {
 
       {/* Date/Time Display */}
       <div className="absolute top-4 left-4 z-20 text-white">
-        <div className="bg-black/60 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 shadow-lg">
+        <div className="bg-black/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 shadow-lg">
           <div className="text-lg font-bold font-quicksand text-shadow-soft">
             {currentDateTime.toLocaleDateString('en-US', { 
               weekday: 'short', 
@@ -286,7 +286,7 @@ const Index = () => {
                   ${button.variant === 'blue' ? '[background:var(--gradient-blue)]' : ''}
                   ${button.variant === 'purple' ? '[background:var(--gradient-purple)]' : ''}
                   ${button.variant === 'gold' ? '[background:var(--gradient-gold)]' : ''}
-                  ${button.variant === 'orange' ? '[background:var(--gradient-orange)]' : ''}
+                  ${button.variant === 'navy' ? '[background:var(--gradient-navy)]' : ''}
                 `}
                 onClick={() => handleButtonClick(index)}
               >
