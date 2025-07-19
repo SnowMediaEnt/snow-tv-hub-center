@@ -71,7 +71,12 @@ export const useAppData = () => {
       
       // Get the response text first to validate it
       const responseText = await response.text();
-      console.log('Raw response text:', responseText);
+      console.log('Raw response text:', responseText.substring(0, 200));
+      
+      // Check if the response is HTML (error page)
+      if (responseText.trim().startsWith('<!DOCTYPE html') || responseText.trim().startsWith('<html')) {
+        throw new Error('Server returned HTML instead of JSON - API may be down');
+      }
       
       // Check if the response is valid JSON
       let data;
@@ -80,7 +85,7 @@ export const useAppData = () => {
         console.log('Parsed JSON response:', data);
       } catch (parseError) {
         console.error('JSON parse error:', parseError);
-        throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}...`);
+        throw new Error(`Invalid JSON response received`);
       }
       
       // Handle different response formats
@@ -130,7 +135,39 @@ export const useAppData = () => {
         return;
       }
       
-      setError(err instanceof Error ? err.message : 'Load failed');
+      // After all retries failed, use fallback data
+      console.log('All retries failed, using fallback app data');
+      const fallbackApps = [
+        {
+          id: 'snow-tv',
+          name: 'Snow TV',
+          version: '2.1.0',
+          size: '45MB',
+          description: 'Premium streaming application with live TV and on-demand content',
+          icon: 'http://104.168.157.178/apps/icons/snow-tv.png',
+          apk: 'http://104.168.157.178/apps/snow-tv.apk',
+          downloadUrl: 'http://104.168.157.178/apps/snow-tv.apk',
+          packageName: 'com.snowtv.app',
+          featured: true,
+          category: 'streaming' as const
+        },
+        {
+          id: 'support-app',
+          name: 'Support Center',
+          version: '1.5.0',
+          size: '25MB',
+          description: 'Customer support and help center application',
+          icon: 'http://104.168.157.178/apps/icons/support.png',
+          apk: 'http://104.168.157.178/apps/support.apk',
+          downloadUrl: 'http://104.168.157.178/apps/support.apk',
+          packageName: 'com.support.app',
+          featured: false,
+          category: 'support' as const
+        }
+      ];
+      
+      setApps(fallbackApps);
+      setError('Using offline app data - server connection failed');
       setLoading(false);
     }
   };
