@@ -3,21 +3,22 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Wallet, CreditCard, History, User, LogOut, Plus, MessageCircle, ShoppingCart, MapPin, Users, Sparkles } from 'lucide-react';
+import { ArrowLeft, Wallet, CreditCard, History, User, LogOut, Plus, MessageCircle, ShoppingCart, MapPin, Users, Sparkles, BookOpen } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useWixIntegration } from '@/hooks/useWixIntegration';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserDashboardProps {
-  onViewChange: (view: 'home' | 'apps' | 'media' | 'news' | 'support' | 'chat' | 'settings' | 'user' | 'store' | 'community' | 'credits') => void;
+  onViewChange: (view: 'home' | 'apps' | 'media' | 'news' | 'support' | 'chat' | 'settings' | 'user' | 'store' | 'community' | 'credits' | 'knowledge') => void;
   onManageMedia: () => void;
   onViewSettings: () => void;
   onCommunityChat: () => void;
   onCreditStore: () => void;
+  onKnowledgeManager: () => void;
 }
 
-const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunityChat, onCreditStore }: UserDashboardProps) => {
+const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunityChat, onCreditStore, onKnowledgeManager }: UserDashboardProps) => {
   const { user, signOut } = useAuth();
   const { profile, transactions, loading } = useUserProfile();
   const { wixProfile, wixOrders, wixReferrals, loading: wixLoading, fetchWixData } = useWixIntegration();
@@ -140,6 +141,15 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
           >
             <MessageCircle className="w-5 h-5 mr-2" />
             Community Chat
+          </Button>
+          <Button 
+            onClick={onKnowledgeManager}
+            size="lg"
+            variant="outline"
+            className="bg-purple-600/20 border-purple-500/50 text-white hover:bg-purple-600/30"
+          >
+            <BookOpen className="w-5 h-5 mr-2" />
+            Knowledge Manager
           </Button>
         </div>
 

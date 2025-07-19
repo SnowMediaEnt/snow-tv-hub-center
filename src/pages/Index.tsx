@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, Store, Video, MessageCircle, Settings as SettingsIcon, User, LogIn } from 'lucide-react';
+import { Package, Store, Video, MessageCircle, Settings as SettingsIcon, User, LogIn, BookOpen } from 'lucide-react';
 import NewsTicker from '@/components/NewsTicker';
 import InstallApps from '@/components/InstallApps';
 import MediaStore from '@/components/MediaStore';
@@ -11,12 +11,13 @@ import CreditStore from '@/components/CreditStore';
 import SupportVideos from '@/components/SupportVideos';
 import ChatCommunity from '@/components/ChatCommunity';
 import Settings from '@/components/Settings';
+import KnowledgeManager from '@/components/KnowledgeManager';
 import UserDashboard from '@/components/UserDashboard';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
-  const [activeView, setActiveView] = useState<'home' | 'apps' | 'media' | 'news' | 'support' | 'chat' | 'settings' | 'user' | 'store' | 'community' | 'credits'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'apps' | 'media' | 'news' | 'support' | 'chat' | 'settings' | 'user' | 'store' | 'community' | 'credits' | 'knowledge'>('home');
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [focusedButton, setFocusedButton] = useState(0);
   const [layoutMode, setLayoutMode] = useState<'grid' | 'row'>(() => {
@@ -182,7 +183,11 @@ const Index = () => {
             onViewSettings={() => setActiveView('settings')}
             onCommunityChat={() => setActiveView('community')}
             onCreditStore={() => setActiveView('credits')}
+            onKnowledgeManager={() => setActiveView('knowledge')}
           />
+        )}
+        {activeView === 'knowledge' && (
+          <KnowledgeManager onBack={() => setActiveView('home')} />
         )}
       </div>
     );
