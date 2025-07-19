@@ -132,7 +132,7 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
       return;
     }
 
-    const aiCost = 0.05; // 5 cents per AI message
+    const aiCost = 0.01; // 1 cent per AI message
     if (!checkCredits(aiCost)) {
       toast({
         title: "Insufficient credits",
@@ -370,7 +370,7 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
               <p className="text-purple-200 mb-6">
                 Ask me about snow media, streaming apps, or get help with your SMC app. I can also navigate you to different sections!
                 <br />
-                <span className="text-sm text-purple-300">Cost: 0.05 credits per message</span>
+                <span className="text-sm text-purple-300">Cost: 0.01 credits per message</span>
               </p>
               
               {/* AI Chat Messages */}
