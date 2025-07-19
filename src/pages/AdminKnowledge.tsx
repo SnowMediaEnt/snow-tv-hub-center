@@ -7,10 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Upload, FileText, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const AdminKnowledge = () => {
   const { toast } = useToast();
-  const [apiKey, setApiKey] = useState('');
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [uploadForm, setUploadForm] = useState({
     title: '',
@@ -58,15 +60,6 @@ const AdminKnowledge = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!apiKey) {
-      toast({
-        title: "API Key Required",
-        description: "Please enter your API key first.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     if (!uploadForm.title || !uploadForm.content) {
       toast({
@@ -80,40 +73,38 @@ const AdminKnowledge = () => {
     setUploading(true);
 
     try {
-      const response = await fetch('https://falmwzhvxoefvkfsiylp.functions.supabase.co/external-knowledge-sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          apiKey: apiKey,
-          action: 'create',
+      // Direct insert to knowledge_documents table
+      const { data, error } = await supabase
+        .from('knowledge_documents')
+        .insert({
           title: uploadForm.title,
           description: uploadForm.description,
           category: uploadForm.category,
-          content: uploadForm.content,
-          file_type: 'text'
-        }),
+          content_preview: uploadForm.content,
+          file_type: 'text',
+          file_path: `admin-upload/${Date.now()}-${uploadForm.title.replace(/[^a-zA-Z0-9]/g, '-')}.txt`,
+          is_active: true,
+          uploaded_by: user?.id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(error.message || 'Upload failed');
+      }
+
+      toast({
+        title: "Success!",
+        description: `Document "${uploadForm.title}" uploaded successfully to knowledge base.`,
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        toast({
-          title: "Success!",
-          description: `Document "${uploadForm.title}" uploaded successfully.`,
-        });
-        
-        // Reset form
-        setUploadForm({
-          title: '',
-          description: '',
-          category: 'general',
-          content: ''
-        });
-      } else {
-        throw new Error(result.error || 'Upload failed');
-      }
+      // Reset form
+      setUploadForm({
+        title: '',
+        description: '',
+        category: 'general',
+        content: ''
+      });
     } catch (error) {
       console.error('Upload error:', error);
       toast({
@@ -136,22 +127,6 @@ const AdminKnowledge = () => {
 
         <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* API Key */}
-            <div className="space-y-2">
-              <Label htmlFor="apiKey" className="text-white text-lg">API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Enter your EXTERNAL_KNOWLEDGE_API_KEY"
-                className="bg-slate-700 border-slate-600 text-white"
-              />
-              <p className="text-sm text-slate-400">
-                This is the secret key you set in Supabase Edge Function Secrets
-              </p>
-            </div>
-
             {/* File Upload */}
             <div className="space-y-2">
               <Label htmlFor="file" className="text-white text-lg">Upload Document</Label>
