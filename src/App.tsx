@@ -26,7 +26,7 @@ const App = () => {
             backgroundRepeat: 'no-repeat',
             backgroundAttachment: 'fixed'
           } : {
-            background: 'linear-gradient(135deg, hsl(0 0% 98%), hsl(220 60% 85%))'
+            background: 'linear-gradient(45deg, #ffd700 0%, #9370db 20%, #87ceeb 40%, #e5e5e5 60%, #ffa500 80%, #ffd700 100%)'
           }}
         >
           <div className="min-h-screen bg-black/20">

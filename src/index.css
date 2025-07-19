@@ -56,6 +56,13 @@
     --gradient-accent: linear-gradient(135deg, hsl(var(--brand-purple)), hsl(var(--brand-ice)));
     --gradient-snowy: linear-gradient(135deg, hsl(var(--snow-white)), hsl(var(--snow-blue)));
     
+    /* Metallic gradients from background image */
+    --gradient-gold: linear-gradient(135deg, #ffd700, #b8860b);
+    --gradient-blue: linear-gradient(135deg, #87ceeb, #4682b4);
+    --gradient-silver: linear-gradient(135deg, #e5e5e5, #a9a9a9);
+    --gradient-purple: linear-gradient(135deg, #9370db, #663399);
+    --gradient-orange: linear-gradient(135deg, #ffa500, #ff6347);
+    
     /* Elegant shadows with brand colors */
     --shadow-brand: 0 10px 30px -10px hsl(var(--brand-ice) / 0.3);
     --shadow-deep: 0 20px 40px -15px hsl(var(--brand-navy) / 0.4);

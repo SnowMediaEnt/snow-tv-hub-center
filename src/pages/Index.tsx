@@ -137,25 +137,25 @@ const Index = () => {
       icon: Package,
       title: 'Main Apps',
       description: 'Download APKs & Streaming Tools',
-      color: 'from-blue-600 to-blue-800'
+      variant: 'blue' as const
     },
     {
       icon: Store,
       title: 'Snow Media Store',
       description: 'Visit Official Store',
-      color: 'from-purple-600 to-purple-800'
+      variant: 'purple' as const
     },
     {
       icon: Video,
       title: 'Support Videos',
       description: 'Help & Tutorial Videos',
-      color: 'from-green-600 to-green-800'
+      variant: 'gold' as const
     },
     {
       icon: MessageCircle,
       title: 'Chat & Community',
       description: 'Connect with Admin & Users',
-      color: 'from-orange-600 to-orange-800'
+      variant: 'orange' as const
     }
   ];
 
@@ -202,9 +202,8 @@ const Index = () => {
         {user ? (
           <Button
             onClick={() => setActiveView('user')}
-            variant="outline"
+            variant="blue"
             size="sm"
-            className="glass-effect border-brand-ice/50 text-white hover:bg-brand-ice/20 font-quicksand font-semibold shadow-lg"
           >
             <User className="w-4 h-4 mr-2" />
             Dashboard
@@ -212,9 +211,8 @@ const Index = () => {
         ) : (
           <Button
             onClick={() => navigate('/auth')}
-            variant="outline"
+            variant="gold"
             size="sm"
-            className="glass-effect border-brand-gold bg-brand-gold/90 text-brand-charcoal hover:bg-brand-gold font-quicksand font-semibold shadow-lg"
           >
             <LogIn className="w-4 h-4 mr-2" />
             Sign In
@@ -222,9 +220,8 @@ const Index = () => {
         )}
         <Button
           onClick={() => setActiveView('settings')}
-          variant="outline"
+          variant="silver"
           size="sm"
-          className="glass-effect border-brand-gold bg-brand-gold/90 text-brand-charcoal hover:bg-brand-gold font-quicksand font-semibold shadow-lg"
         >
           <SettingsIcon className="w-4 h-4 mr-2" />
           Settings
@@ -247,7 +244,7 @@ const Index = () => {
 
       {/* Date/Time Display */}
       <div className="absolute top-4 left-4 z-20 text-white">
-        <div className="glass-effect rounded-xl px-4 py-3 border border-brand-ice/30 shadow-lg">
+        <div className="bg-black/60 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 shadow-lg">
           <div className="text-lg font-bold font-quicksand text-shadow-soft">
             {currentDateTime.toLocaleDateString('en-US', { 
               weekday: 'short', 
@@ -279,14 +276,17 @@ const Index = () => {
               <Card
                 key={index}
                 className={`
-                  relative overflow-hidden cursor-pointer
+                  relative overflow-hidden cursor-pointer border-0 rounded-3xl
+                  ${layoutMode === 'grid' ? 'h-52 aspect-[4/3]' : 'h-32 w-48'}
                   ${isFocused 
-                    ? 'ring-4 ring-brand-ice/60 shadow-2xl' 
+                    ? 'ring-4 ring-white/60 shadow-2xl scale-105' 
                     : 'shadow-xl'
                   }
-                  bg-gradient-to-br ${button.color} border-0 rounded-3xl
-                  ${layoutMode === 'grid' ? 'h-52 aspect-[4/3]' : 'h-32 w-48'}
-                  card-polished
+                  transition-all duration-200
+                  ${button.variant === 'blue' ? '[background:var(--gradient-blue)]' : ''}
+                  ${button.variant === 'purple' ? '[background:var(--gradient-purple)]' : ''}
+                  ${button.variant === 'gold' ? '[background:var(--gradient-gold)]' : ''}
+                  ${button.variant === 'orange' ? '[background:var(--gradient-orange)]' : ''}
                 `}
                 onClick={() => handleButtonClick(index)}
               >
