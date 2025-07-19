@@ -161,7 +161,7 @@ export const useWixIntegration = () => {
           const referralResult = await getReferralInfo(memberResult.member.id);
           setWixReferrals({
             ...referralResult.referral,
-            referralUrl: `https://yourwebsite.com/ref/${referralResult.referral.code}`,
+            referralUrl: referralResult.referral.link, // Use the actual referral URL from Wix
             totalReferrals: 0,
             totalEarnings: '0.00',
             pendingEarnings: '0.00'
