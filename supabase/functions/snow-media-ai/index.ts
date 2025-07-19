@@ -93,7 +93,7 @@ Be friendly, knowledgeable, and always ready to help with both snow media questi
               properties: {
                 section: {
                   type: 'string',
-                  enum: ['home', 'apps', 'install-apps', 'media-store', 'videos', 'chat', 'settings', 'credits'],
+                  enum: ['home', 'apps', 'install-apps', 'media', 'store', 'credits', 'support', 'chat', 'settings', 'user'],
                   description: 'The app section to navigate to'
                 },
                 reason: {
@@ -105,22 +105,55 @@ Be friendly, knowledgeable, and always ready to help with both snow media questi
             }
           },
           {
-            name: 'find_content',
-            description: 'Search for specific content in the app',
+            name: 'find_support_video',
+            description: 'Navigate to support videos and search for specific videos',
             parameters: {
               type: 'object',
               properties: {
                 query: {
                   type: 'string',
-                  description: 'What to search for'
+                  description: 'What video to search for (e.g., "dreamstreams install", "streaming setup")'
                 },
-                type: {
+                app_name: {
                   type: 'string',
-                  enum: ['app', 'video', 'tutorial', 'general'],
-                  description: 'Type of content to search for'
+                  description: 'Specific app name if mentioned (e.g., "Dreamstreams", "Netflix", "Kodi")'
                 }
               },
-              required: ['query', 'type']
+              required: ['query']
+            }
+          },
+          {
+            name: 'change_background',
+            description: 'Help user change the app background or theme',
+            parameters: {
+              type: 'object',
+              properties: {
+                action: {
+                  type: 'string',
+                  enum: ['open_settings', 'suggest_themes', 'upload_custom'],
+                  description: 'What background action to take'
+                }
+              },
+              required: ['action']
+            }
+          },
+          {
+            name: 'open_store_section',
+            description: 'Navigate to store and optionally search for specific items',
+            parameters: {
+              type: 'object',
+              properties: {
+                section: {
+                  type: 'string',
+                  enum: ['credits', 'media', 'apps'],
+                  description: 'Which store section to open'
+                },
+                search_term: {
+                  type: 'string',
+                  description: 'Optional search term for store items'
+                }
+              },
+              required: ['section']
             }
           },
           {
@@ -131,11 +164,30 @@ Be friendly, knowledgeable, and always ready to help with both snow media questi
               properties: {
                 action: {
                   type: 'string',
-                  enum: ['balance', 'purchase', 'usage'],
+                  enum: ['balance', 'purchase', 'usage', 'history'],
                   description: 'What credit information to show'
                 }
               },
               required: ['action']
+            }
+          },
+          {
+            name: 'help_with_installation',
+            description: 'Guide user through app installation process',
+            parameters: {
+              type: 'object',
+              properties: {
+                app_name: {
+                  type: 'string',
+                  description: 'Name of the app to install'
+                },
+                device_type: {
+                  type: 'string',
+                  enum: ['android_tv', 'fire_tv', 'android_phone', 'generic'],
+                  description: 'Type of device for installation'
+                }
+              },
+              required: ['app_name']
             }
           }
         ],

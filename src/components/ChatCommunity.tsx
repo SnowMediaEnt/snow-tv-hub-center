@@ -45,25 +45,90 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
     switch (name) {
       case 'navigate_to_section':
         if (onNavigate) {
-          onNavigate(args.section);
+          // Map AI section names to app section names
+          const sectionMap: Record<string, string> = {
+            'install-apps': 'apps',
+            'support': 'videos',
+            'media': 'store',
+            'user': 'user'
+          };
+          const targetSection = sectionMap[args.section] || args.section;
+          
+          onNavigate(targetSection);
           toast({
             title: "Navigation",
             description: `Navigating to ${args.section}: ${args.reason}`,
           });
         }
         break;
-      case 'find_content':
-        toast({
-          title: "Search",
-          description: `Searching for ${args.type}: ${args.query}`,
-        });
+      
+      case 'find_support_video':
+        if (onNavigate) {
+          onNavigate('videos'); // Navigate to support videos
+          toast({
+            title: "Support Videos",
+            description: `Looking for videos about: ${args.query}${args.app_name ? ` (${args.app_name})` : ''}`,
+          });
+        }
         break;
+      
+      case 'change_background':
+        if (args.action === 'open_settings' && onNavigate) {
+          onNavigate('settings');
+          toast({
+            title: "Background Settings",
+            description: "Opening settings to change background",
+          });
+        } else {
+          toast({
+            title: "Background Change",
+            description: args.action === 'suggest_themes' 
+              ? "You can change backgrounds in Settings > Media Management" 
+              : "You can upload custom backgrounds in Settings",
+          });
+        }
+        break;
+      
+      case 'open_store_section':
+        if (onNavigate) {
+          if (args.section === 'credits') {
+            onNavigate('credits');
+          } else if (args.section === 'media') {
+            onNavigate('store');
+          } else {
+            onNavigate('apps');
+          }
+          toast({
+            title: "Store",
+            description: `Opening ${args.section} store${args.search_term ? ` - searching for: ${args.search_term}` : ''}`,
+          });
+        }
+        break;
+      
+      case 'help_with_installation':
+        if (onNavigate) {
+          onNavigate('apps'); // Navigate to install apps section
+          toast({
+            title: "App Installation",
+            description: `Helping with ${args.app_name} installation${args.device_type ? ` on ${args.device_type}` : ''}`,
+          });
+        }
+        break;
+      
       case 'show_credits_info':
+        if (args.action === 'purchase' && onNavigate) {
+          onNavigate('credits');
+        }
         toast({
           title: "Credits",
-          description: `Current balance: ${profile?.credits?.toFixed(2) || '0.00'} credits`,
+          description: args.action === 'balance' 
+            ? `Current balance: ${profile?.credits?.toFixed(2) || '0.00'} credits`
+            : args.action === 'purchase'
+            ? "Opening credit store"
+            : "Showing credit information",
         });
         break;
+      
       default:
         console.log('Unknown function:', name, args);
     }
