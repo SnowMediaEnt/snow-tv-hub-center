@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Download, Play, Package, Smartphone, Tv, Settings, HardDrive, Database, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAppData } from '@/hooks/useAppData';
+import { useApps } from '@/hooks/useApps';
 import DownloadProgress from './DownloadProgress';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
@@ -19,13 +19,14 @@ interface App {
   id: string;
   name: string;
   description: string;
-  category: 'streaming' | 'support';
-  icon: string;
-  downloadUrl: string;
-  packageName: string; // For launching
   size: string;
-  version: string;
-  featured?: boolean;
+  category: string;
+  icon_url: string | null;
+  download_url: string | null;
+  is_installed: boolean;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 const InstallApps = ({ onBack }: InstallAppsProps) => {
@@ -34,19 +35,28 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
   const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
   const [currentDownload, setCurrentDownload] = useState<App | null>(null);
   const { toast } = useToast();
-  const { apps, loading, error } = useAppData();
+  const { apps, loading, error } = useApps();
 
   const handleDownload = async (app: App) => {
     setCurrentDownload(app);
     setDownloadingApps(prev => new Set(prev.add(app.id)));
     
     try {
+      if (!app.download_url) {
+        toast({
+          title: "Download Error",
+          description: "No download URL available for this app",
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (Capacitor.isNativePlatform()) {
         // Use Capacitor filesystem for native platforms
         const fileName = `${app.name.replace(/\s+/g, '_')}.apk`;
         
         // Fetch the file
-        const response = await fetch(app.downloadUrl);
+        const response = await fetch(`http://${app.download_url}`);
         const blob = await response.blob();
         const arrayBuffer = await blob.arrayBuffer();
         const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
@@ -65,7 +75,7 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
       } else {
         // Fallback for web - direct download
         const link = document.createElement('a');
-        link.href = app.downloadUrl;
+        link.href = `http://${app.download_url}`;
         link.download = `${app.name.replace(/\s+/g, '_')}.apk`;
         link.style.display = 'none';
         document.body.appendChild(link);
@@ -143,8 +153,9 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
   };
 
   const handleLaunch = (app: App) => {
-    // Android app launch intent
-    const launchIntent = `intent://${app.packageName}#Intent;scheme=package;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;end`;
+    // Android app launch intent using package name derived from app name
+    const packageName = `com.${app.name.toLowerCase().replace(/\s+/g, '')}.app`;
+    const launchIntent = `intent://${packageName}#Intent;scheme=package;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;end`;
     
     try {
       window.location.href = launchIntent;
@@ -162,8 +173,9 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
   };
 
   const handleClearCache = (app: App) => {
-    // Android clear cache intent
-    const clearCacheIntent = `intent://${app.packageName}#Intent;scheme=package;action=android.settings.APPLICATION_DETAILS_SETTINGS;end`;
+    // Android clear cache intent using package name derived from app name
+    const packageName = `com.${app.name.toLowerCase().replace(/\s+/g, '')}.app`;
+    const clearCacheIntent = `intent://${packageName}#Intent;scheme=package;action=android.settings.APPLICATION_DETAILS_SETTINGS;end`;
     
     try {
       window.location.href = clearCacheIntent;
@@ -181,8 +193,9 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
   };
 
   const handleClearData = (app: App) => {
-    // Android clear data intent
-    const clearDataIntent = `intent://${app.packageName}#Intent;scheme=package;action=android.settings.APPLICATION_DETAILS_SETTINGS;end`;
+    // Android clear data intent using package name derived from app name
+    const packageName = `com.${app.name.toLowerCase().replace(/\s+/g, '')}.app`;
+    const clearDataIntent = `intent://${packageName}#Intent;scheme=package;action=android.settings.APPLICATION_DETAILS_SETTINGS;end`;
     
     try {
       window.location.href = clearDataIntent;
@@ -200,8 +213,9 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
   };
 
   const handleUninstall = (app: App) => {
-    // Android uninstall intent
-    const uninstallIntent = `intent://uninstall?package=${app.packageName}#Intent;scheme=package;action=android.intent.action.DELETE;end`;
+    // Android uninstall intent using package name derived from app name
+    const packageName = `com.${app.name.toLowerCase().replace(/\s+/g, '')}.app`;
+    const uninstallIntent = `intent://uninstall?package=${packageName}#Intent;scheme=package;action=android.intent.action.DELETE;end`;
     
     try {
       window.location.href = uninstallIntent;
@@ -225,7 +239,7 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
   };
 
   const getCategoryApps = (category: string) => {
-    return apps.filter(app => category === 'featured' ? app.featured : app.category === category);
+    return apps.filter(app => category === 'featured' ? app.is_featured : app.category === category);
   };
 
   if (loading) {
@@ -276,7 +290,7 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
               <div className="flex items-start gap-4 mb-4">
                 <div className="w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl flex items-center justify-center overflow-hidden">
                   <img 
-                    src={app.icon} 
+                    src={app.icon_url || '/icons/default.png'} 
                     alt={`${app.name} icon`}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -297,14 +311,12 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-xl font-bold text-white">{app.name}</h3>
-                    {app.featured && (
+                    {app.is_featured && (
                       <Badge className="bg-green-600 text-white">Featured</Badge>
                     )}
                   </div>
                   <p className="text-slate-400 text-sm mb-2">{app.description}</p>
                   <div className="flex gap-2 text-xs text-slate-500">
-                    <span>v{app.version}</span>
-                    <span>•</span>
                     <span>{app.size}</span>
                   </div>
                 </div>

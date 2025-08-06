@@ -93,6 +93,8 @@ const Index = () => {
             handleButtonClick(focusedButton);
             break;
           case 'Escape':
+          case 'Backspace':
+            event.preventDefault();
             if (activeView !== 'home') {
               setActiveView('home');
             }
@@ -115,6 +117,8 @@ const Index = () => {
             handleButtonClick(focusedButton);
             break;
           case 'Escape':
+          case 'Backspace':
+            event.preventDefault();
             if (activeView !== 'home') {
               setActiveView('home');
             }

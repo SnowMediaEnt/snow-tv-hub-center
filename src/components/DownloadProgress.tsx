@@ -10,7 +10,6 @@ interface DownloadProgressProps {
     id: string;
     name: string;
     size: string;
-    packageName: string;
   };
   onClose: () => void;
   onComplete: () => void;
@@ -64,8 +63,9 @@ const DownloadProgress = ({ app, onClose, onComplete }: DownloadProgressProps) =
   };
 
   const handleUninstall = () => {
-    // Android uninstall intent
-    const uninstallIntent = `intent://uninstall?package=${app.packageName}#Intent;scheme=package;action=android.intent.action.DELETE;end`;
+    // Android uninstall intent using package name derived from app name
+    const packageName = `com.${app.name.toLowerCase().replace(/\s+/g, '')}.app`;
+    const uninstallIntent = `intent://uninstall?package=${packageName}#Intent;scheme=package;action=android.intent.action.DELETE;end`;
     
     try {
       window.location.href = uninstallIntent;
@@ -85,8 +85,9 @@ const DownloadProgress = ({ app, onClose, onComplete }: DownloadProgressProps) =
   };
 
   const handleClearData = () => {
-    // Android clear data intent
-    const clearDataIntent = `intent://${app.packageName}#Intent;scheme=package;action=android.settings.APPLICATION_DETAILS_SETTINGS;end`;
+    // Android clear data intent using package name derived from app name
+    const packageName = `com.${app.name.toLowerCase().replace(/\s+/g, '')}.app`;
+    const clearDataIntent = `intent://${packageName}#Intent;scheme=package;action=android.settings.APPLICATION_DETAILS_SETTINGS;end`;
     
     try {
       window.location.href = clearDataIntent;
@@ -104,8 +105,9 @@ const DownloadProgress = ({ app, onClose, onComplete }: DownloadProgressProps) =
   };
 
   const handleClearCache = () => {
-    // Android clear cache intent
-    const clearCacheIntent = `intent://${app.packageName}#Intent;scheme=package;action=android.settings.APPLICATION_DETAILS_SETTINGS;end`;
+    // Android clear cache intent using package name derived from app name
+    const packageName = `com.${app.name.toLowerCase().replace(/\s+/g, '')}.app`;
+    const clearCacheIntent = `intent://${packageName}#Intent;scheme=package;action=android.settings.APPLICATION_DETAILS_SETTINGS;end`;
     
     try {
       window.location.href = clearCacheIntent;
