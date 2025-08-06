@@ -51,12 +51,22 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
         return;
       }
 
+      // Create a proper download URL with protocol
+      const downloadUrl = app.download_url?.startsWith('http') 
+        ? app.download_url 
+        : `http://${app.download_url}`;
+
       if (Capacitor.isNativePlatform()) {
         // Use Capacitor filesystem for native platforms
         const fileName = `${app.name.replace(/\s+/g, '_')}.apk`;
         
         // Fetch the file
-        const response = await fetch(`http://${app.download_url}`);
+        const response = await fetch(downloadUrl);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const blob = await response.blob();
         const arrayBuffer = await blob.arrayBuffer();
         const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
@@ -75,12 +85,17 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
       } else {
         // Fallback for web - direct download
         const link = document.createElement('a');
-        link.href = `http://${app.download_url}`;
+        link.href = downloadUrl;
         link.download = `${app.name.replace(/\s+/g, '_')}.apk`;
         link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        toast({
+          title: "Download Started",
+          description: `${app.name} download initiated`,
+        });
       }
       
       // Show progress modal

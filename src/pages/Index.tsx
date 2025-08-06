@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router-dom';
 const Index = () => {
   const [activeView, setActiveView] = useState<'home' | 'apps' | 'media' | 'news' | 'support' | 'chat' | 'settings' | 'user' | 'store' | 'community' | 'credits'>('home');
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
-  const [focusedButton, setFocusedButton] = useState(0);
+  const [focusedButton, setFocusedButton] = useState(0); // -2: auth/user, -1: settings, 0-3: main apps
   const [layoutMode, setLayoutMode] = useState<'grid' | 'row'>(() => {
     const saved = localStorage.getItem('snow-media-layout');
     return (saved as 'grid' | 'row') || 'grid';
@@ -42,85 +42,125 @@ const Index = () => {
   // Handle keyboard navigation for TV remote
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (activeView !== 'home') return; // Don't handle navigation when in a section
+      event.preventDefault(); // Always prevent default to avoid native app closing
+      
+      if (activeView !== 'home') {
+        // When in a section, only handle back navigation
+        if (event.key === 'Escape' || event.key === 'Backspace') {
+          setActiveView('home');
+        }
+        return;
+      }
       
       if (layoutMode === 'grid') {
-        // 2x2 grid navigation
+        // Enhanced 3x2 grid navigation (4 main apps + 2 top buttons)
+        // Layout: [SignIn/Dashboard] [Settings]
+        //         [App0]             [App1]
+        //         [App2]             [App3]
         switch (event.key) {
           case 'ArrowRight':
-            event.preventDefault();
             setFocusedButton((prev) => {
-              if (prev === 0) return 1; // Top row: left to right
-              if (prev === 1) return 0; // Top row: right to left (wrap)
-              if (prev === 2) return 3; // Bottom row: left to right
-              if (prev === 3) return 2; // Bottom row: right to left (wrap)
+              if (prev === -2) return -1; // Sign in to Settings
+              if (prev === -1) return -2; // Settings to Sign in (wrap)
+              if (prev === 0) return 1; // App0 to App1
+              if (prev === 1) return 0; // App1 to App0 (wrap)
+              if (prev === 2) return 3; // App2 to App3
+              if (prev === 3) return 2; // App3 to App2 (wrap)
               return prev;
             });
             break;
           case 'ArrowLeft':
-            event.preventDefault();
             setFocusedButton((prev) => {
-              if (prev === 0) return 1; // Top row: left to right (wrap)
-              if (prev === 1) return 0; // Top row: right to left
-              if (prev === 2) return 3; // Bottom row: left to right (wrap)
-              if (prev === 3) return 2; // Bottom row: right to left
+              if (prev === -2) return -1; // Sign in to Settings (wrap)
+              if (prev === -1) return -2; // Settings to Sign in
+              if (prev === 0) return 1; // App0 to App1 (wrap)
+              if (prev === 1) return 0; // App1 to App0
+              if (prev === 2) return 3; // App2 to App3 (wrap)
+              if (prev === 3) return 2; // App3 to App2
               return prev;
             });
             break;
           case 'ArrowDown':
-            event.preventDefault();
             setFocusedButton((prev) => {
-              if (prev === 0) return 2; // Top left to bottom left
-              if (prev === 1) return 3; // Top right to bottom right
-              if (prev === 2) return 0; // Bottom left to top left (wrap)
-              if (prev === 3) return 1; // Bottom right to top right (wrap)
+              if (prev === -2) return 0; // Sign in to App0
+              if (prev === -1) return 1; // Settings to App1
+              if (prev === 0) return 2; // App0 to App2
+              if (prev === 1) return 3; // App1 to App3
+              if (prev === 2) return -2; // App2 to Sign in (wrap)
+              if (prev === 3) return -1; // App3 to Settings (wrap)
               return prev;
             });
             break;
           case 'ArrowUp':
-            event.preventDefault();
             setFocusedButton((prev) => {
-              if (prev === 0) return 2; // Top left to bottom left (wrap)
-              if (prev === 1) return 3; // Top right to bottom right (wrap)
-              if (prev === 2) return 0; // Bottom left to top left
-              if (prev === 3) return 1; // Bottom right to top right
+              if (prev === -2) return 2; // Sign in to App2 (wrap)
+              if (prev === -1) return 3; // Settings to App3 (wrap)
+              if (prev === 0) return -2; // App0 to Sign in
+              if (prev === 1) return -1; // App1 to Settings
+              if (prev === 2) return 0; // App2 to App0
+              if (prev === 3) return 1; // App3 to App1
               return prev;
             });
             break;
           case 'Enter':
           case ' ':
-            event.preventDefault();
-            handleButtonClick(focusedButton);
-            break;
-          case 'Escape':
-          case 'Backspace':
-            event.preventDefault();
-            if (activeView !== 'home') {
-              setActiveView('home');
+            if (focusedButton >= 0) {
+              handleButtonClick(focusedButton);
+            } else if (focusedButton === -2) {
+              // Navigate to auth or user dashboard
+              if (user) {
+                setActiveView('user');
+              } else {
+                navigate('/auth');
+              }
+            } else if (focusedButton === -1) {
+              // Navigate to settings
+              setActiveView('settings');
             }
             break;
         }
       } else {
-        // Row layout navigation (original)
+        // Row layout navigation with enhanced navigation
         switch (event.key) {
           case 'ArrowRight':
-            event.preventDefault();
-            setFocusedButton((prev) => (prev + 1) % 4);
+            setFocusedButton((prev) => {
+              if (prev === -2) return -1; // Sign in to Settings
+              if (prev === -1) return 0; // Settings to first app
+              return (prev + 1) % 4; // Cycle through apps
+            });
             break;
           case 'ArrowLeft':
-            event.preventDefault();
-            setFocusedButton((prev) => (prev - 1 + 4) % 4);
+            setFocusedButton((prev) => {
+              if (prev === 0) return -1; // First app to Settings
+              if (prev === -1) return -2; // Settings to Sign in
+              if (prev === -2) return 3; // Sign in to last app (wrap)
+              return (prev - 1 + 4) % 4; // Cycle through apps
+            });
+            break;
+          case 'ArrowUp':
+            setFocusedButton((prev) => {
+              if (prev >= 0) return -2; // From apps to Sign in
+              return prev; // Stay in top row
+            });
+            break;
+          case 'ArrowDown':
+            setFocusedButton((prev) => {
+              if (prev < 0) return 0; // From top buttons to first app
+              return prev; // Stay in apps row
+            });
             break;
           case 'Enter':
           case ' ':
-            event.preventDefault();
-            handleButtonClick(focusedButton);
-            break;
-          case 'Escape':
-          case 'Backspace':
-            event.preventDefault();
-            if (activeView !== 'home') {
-              setActiveView('home');
+            if (focusedButton >= 0) {
+              handleButtonClick(focusedButton);
+            } else if (focusedButton === -2) {
+              if (user) {
+                setActiveView('user');
+              } else {
+                navigate('/auth');
+              }
+            } else if (focusedButton === -1) {
+              setActiveView('settings');
             }
             break;
         }
@@ -208,6 +248,11 @@ const Index = () => {
             onClick={() => setActiveView('user')}
             variant="white"
             size="sm"
+            className={`transition-all duration-200 ${
+              focusedButton === -2 
+                ? 'ring-4 ring-white/60 shadow-2xl scale-105' 
+                : ''
+            }`}
           >
             <User className="w-4 h-4 mr-2 text-gray-800" />
             <span className="text-gray-800">Dashboard</span>
@@ -217,6 +262,11 @@ const Index = () => {
             onClick={() => navigate('/auth')}
             variant="gold"
             size="sm"
+            className={`transition-all duration-200 ${
+              focusedButton === -2 
+                ? 'ring-4 ring-white/60 shadow-2xl scale-105' 
+                : ''
+            }`}
           >
             <LogIn className="w-4 h-4 mr-2" />
             Sign In
@@ -226,6 +276,11 @@ const Index = () => {
           onClick={() => setActiveView('settings')}
           variant="gold"
           size="sm"
+          className={`transition-all duration-200 ${
+            focusedButton === -1 
+              ? 'ring-4 ring-white/60 shadow-2xl scale-105' 
+              : ''
+          }`}
         >
           <SettingsIcon className="w-4 h-4 mr-2" />
           Settings
@@ -270,7 +325,7 @@ const Index = () => {
       <NewsTicker />
 
       {/* Main Content */}
-      <div className={`relative z-10 px-8 ${layoutMode === 'grid' ? 'flex flex-col justify-center items-center min-h-[calc(100vh-200px)] pt-20' : 'flex flex-col justify-end pb-16 flex-1'}`}>
+      <div className={`relative z-10 px-8 ${layoutMode === 'grid' ? 'flex flex-col justify-center items-center min-h-screen pt-20 pb-20 overflow-y-auto' : 'flex flex-col justify-end pb-16 flex-1'}`}>
         <div className={layoutMode === 'grid' ? 'grid grid-cols-2 justify-items-center w-full max-w-none px-16 gap-y-20' : 'flex gap-6 justify-center max-w-5xl mx-auto'}>
           {buttons.map((button, index) => {
             const Icon = button.icon;

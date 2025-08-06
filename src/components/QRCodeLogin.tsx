@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, RefreshCw, QrCode } from 'lucide-react';
+import { Loader2, RefreshCw, QrCode, AlertTriangle } from 'lucide-react';
 import QRCode from 'qrcode';
 
 interface QRCodeLoginProps {
@@ -19,8 +19,15 @@ const QRCodeLogin = ({ onSuccess }: QRCodeLoginProps) => {
   const generateQRCode = async () => {
     setLoading(true);
     try {
-      // Generate a unique token for this QR code session
-      const token = crypto.randomUUID();
+      // Check if we're in a secure context (required for crypto.randomUUID)
+      let token: string;
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        token = crypto.randomUUID();
+      } else {
+        // Fallback for non-secure contexts
+        token = 'qr_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+      }
+      
       setLoginToken(token);
 
       // Create the QR login session in the database
@@ -33,20 +40,23 @@ const QRCodeLogin = ({ onSuccess }: QRCodeLoginProps) => {
         });
 
       if (sessionError) {
-        throw sessionError;
+        console.error('Database error:', sessionError);
+        throw new Error(`Database error: ${sessionError.message}`);
       }
 
       // Create the login URL with the token
-      const loginUrl = `${window.location.origin}/qr-login?token=${token}`;
+      const baseUrl = window.location.origin;
+      const loginUrl = `${baseUrl}/qr-login?token=${token}`;
       
-      // Generate QR code
+      // Generate QR code with better error handling
       const qrDataUrl = await QRCode.toDataURL(loginUrl, {
-        width: 200,
+        width: 256,
         margin: 2,
         color: {
           dark: '#1e293b',
           light: '#ffffff'
-        }
+        },
+        errorCorrectionLevel: 'M'
       });
       
       setQrCodeUrl(qrDataUrl);
@@ -54,11 +64,17 @@ const QRCodeLogin = ({ onSuccess }: QRCodeLoginProps) => {
       // Start polling for authentication
       startPolling(token);
       
+      toast({
+        title: "QR Code Generated",
+        description: "Scan with your phone to log in",
+      });
+      
     } catch (error) {
       console.error('Error generating QR code:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "QR Code Error",
-        description: "Failed to generate QR code",
+        description: `Failed to generate QR code: ${errorMessage}`,
         variant: "destructive",
       });
     } finally {
@@ -129,7 +145,7 @@ const QRCodeLogin = ({ onSuccess }: QRCodeLoginProps) => {
 
       <Card className="bg-white/5 border-white/10 p-6 text-center">
         {loading ? (
-          <div className="flex flex-col items-center space-y-4">
+          <div className="flex flex-col items-center space-y-4 py-8">
             <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
             <p className="text-white/60">Generating QR code...</p>
           </div>
@@ -139,7 +155,7 @@ const QRCodeLogin = ({ onSuccess }: QRCodeLoginProps) => {
               <img 
                 src={qrCodeUrl} 
                 alt="QR Code for login" 
-                className="w-48 h-48 mx-auto"
+                className="w-64 h-64 mx-auto"
               />
             </div>
             <div className="space-y-2">
@@ -151,7 +167,14 @@ const QRCodeLogin = ({ onSuccess }: QRCodeLoginProps) => {
               </p>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="flex flex-col items-center space-y-4 py-8">
+            <AlertTriangle className="w-8 h-8 text-yellow-400" />
+            <p className="text-yellow-200 text-center">
+              QR code not generated yet
+            </p>
+          </div>
+        )}
       </Card>
 
       <Button 

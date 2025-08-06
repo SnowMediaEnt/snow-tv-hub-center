@@ -37,6 +37,19 @@ const Auth = () => {
     }
   }, [user, navigate]);
 
+  // Prevent back button from closing app
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' || event.key === 'Backspace') {
+        event.preventDefault();
+        navigate('/');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -169,7 +182,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-4 md:p-8 overflow-y-auto">
       <div className="max-w-md mx-auto">
         <div className="flex items-center mb-8">
           <Button 
@@ -219,7 +232,7 @@ const Auth = () => {
                       value={loginForm.email}
                       onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
                       placeholder="Enter your email"
-                      className="pl-10 bg-white/10 border-white/20 text-black placeholder:text-gray-600"
+                      className="pl-10 bg-white/90 border-white/20 text-black placeholder:text-gray-600"
                       required
                     />
                   </div>
@@ -235,7 +248,7 @@ const Auth = () => {
                       value={loginForm.password}
                       onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
                       placeholder="Enter your password"
-                      className="pl-10 pr-10 bg-white/10 border-white/20 text-black placeholder:text-gray-600"
+                      className="pl-10 pr-10 bg-white/90 border-white/20 text-black placeholder:text-gray-600"
                       required
                     />
                     <button
@@ -279,7 +292,7 @@ const Auth = () => {
                       value={signupForm.fullName}
                       onChange={(e) => setSignupForm({...signupForm, fullName: e.target.value})}
                       placeholder="Enter your full name"
-                      className="pl-10 bg-white/10 border-white/20 text-black placeholder:text-gray-600"
+                      className="pl-10 bg-white/90 border-white/20 text-black placeholder:text-gray-600"
                     />
                   </div>
                 </div>
@@ -294,7 +307,7 @@ const Auth = () => {
                       value={signupForm.email}
                       onChange={(e) => setSignupForm({...signupForm, email: e.target.value})}
                       placeholder="Enter your email"
-                      className="pl-10 bg-white/10 border-white/20 text-black placeholder:text-gray-600"
+                      className="pl-10 bg-white/90 border-white/20 text-black placeholder:text-gray-600"
                       required
                     />
                   </div>
@@ -310,7 +323,7 @@ const Auth = () => {
                       value={signupForm.password}
                       onChange={(e) => setSignupForm({...signupForm, password: e.target.value})}
                       placeholder="Create a password"
-                      className="pl-10 pr-10 bg-white/10 border-white/20 text-black placeholder:text-gray-600"
+                      className="pl-10 pr-10 bg-white/90 border-white/20 text-black placeholder:text-gray-600"
                       required
                     />
                     <button
@@ -333,7 +346,7 @@ const Auth = () => {
                       value={signupForm.confirmPassword}
                       onChange={(e) => setSignupForm({...signupForm, confirmPassword: e.target.value})}
                       placeholder="Confirm your password"
-                      className="pl-10 pr-10 bg-white/10 border-white/20 text-black placeholder:text-gray-600"
+                      className="pl-10 pr-10 bg-white/90 border-white/20 text-black placeholder:text-gray-600"
                       required
                     />
                     <button
