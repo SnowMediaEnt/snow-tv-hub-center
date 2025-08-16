@@ -31,8 +31,8 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
   const checkForUpdates = async () => {
     setIsChecking(true);
     try {
-      // Check your server for update info
-      const response = await fetch('http://104.168.157.178/smc/update.json');
+      // Use CORS proxy to access the update.json file
+      const response = await fetch('https://api.allorigins.win/raw?url=http://104.168.157.178/smc/update.json');
       
       if (!response.ok) {
         throw new Error('Failed to check for updates');

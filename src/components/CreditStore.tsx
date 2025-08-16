@@ -73,32 +73,77 @@ const CreditStore = ({ onBack }: CreditStoreProps) => {
 
     setPurchasing(packageData.id);
     
-    // For now, we'll simulate the purchase
-    // In a real implementation, you would integrate with a payment processor
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Add credits to user account
-      const { error } = await supabase.rpc('update_user_credits', {
-        p_user_id: user.id,
-        p_amount: packageData.credits,
-        p_transaction_type: 'purchase',
-        p_description: `Purchased ${packageData.name}`,
-        p_paypal_transaction_id: `sim_${Date.now()}`
+      // Create a cart in Wix with the credit package
+      const { data: cartData, error: cartError } = await supabase.functions.invoke('wix-integration', {
+        body: {
+          action: 'create-cart',
+          items: [
+            {
+              catalogReference: {
+                appId: '1380b703-ce81-ff05-f115-39571d94dfcd',
+                catalogItemId: packageData.id
+              },
+              quantity: 1
+            }
+          ]
+        }
       });
 
-      if (error) throw error;
+      if (cartError) {
+        console.error('Error creating Wix cart:', cartError);
+        throw new Error('Failed to create cart');
+      }
 
-      toast({
-        title: "Purchase Successful!",
-        description: `You've received ${packageData.credits} credits`,
-      });
+      if (cartData?.checkoutUrl) {
+        // Open Wix checkout in a new tab
+        window.open(cartData.checkoutUrl, '_blank');
+        
+        toast({
+          title: "Redirecting to Payment",
+          description: "Opening Wix checkout in a new tab",
+        });
+
+        // Add a listener for when the user returns to check if payment was successful
+        // This is a simple approach - in production you might want to use webhooks
+        const checkPaymentInterval = setInterval(async () => {
+          try {
+            // Check if the user's credits have increased
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('credits')
+              .eq('user_id', user.id)
+              .single();
+            
+            if (profile && profile.credits > (window as any).previousCredits) {
+              clearInterval(checkPaymentInterval);
+              toast({
+                title: "Payment Successful!",
+                description: `You've received ${packageData.credits} credits`,
+              });
+              window.location.reload(); // Refresh to show updated credits
+            }
+          } catch (error) {
+            console.error('Error checking payment status:', error);
+          }
+        }, 5000); // Check every 5 seconds
+
+        // Store current credits for comparison
+        (window as any).previousCredits = profile?.credits || 0;
+
+        // Stop checking after 5 minutes
+        setTimeout(() => {
+          clearInterval(checkPaymentInterval);
+        }, 300000);
+        
+      } else {
+        throw new Error('No checkout URL received from Wix');
+      }
     } catch (error) {
       console.error('Error purchasing credits:', error);
       toast({
         title: "Purchase Failed",
-        description: "Unable to complete purchase. Please try again.",
+        description: "Unable to create checkout. Please try again.",
         variant: "destructive",
       });
     } finally {
