@@ -12,6 +12,7 @@ import SupportVideos from '@/components/SupportVideos';
 import ChatCommunity from '@/components/ChatCommunity';
 import Settings from '@/components/Settings';
 import UserDashboard from '@/components/UserDashboard';
+import AppUpdater from '@/components/AppUpdater';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
@@ -233,7 +234,7 @@ const Index = () => {
   }
 
   return (
-    <div className={`min-h-screen text-white overflow-hidden relative ${layoutMode === 'row' ? 'flex flex-col' : ''}`}>
+    <div className={`min-h-screen text-white overflow-hidden relative ${layoutMode === 'row' ? 'flex flex-col' : ''}`} style={{ height: '100vh', maxHeight: '100vh' }}>
       {/* Subtle snowy background pattern - only visible when no global background is active */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-blue-100/30 to-blue-200/20" />
       <div className="absolute inset-0 opacity-30">
@@ -324,8 +325,13 @@ const Index = () => {
       {/* News Ticker */}
       <NewsTicker />
 
+      {/* Auto-update checker */}
+      <div className="absolute bottom-4 left-4 z-20">
+        <AppUpdater autoCheck={true} />
+      </div>
+
       {/* Main Content */}
-      <div className={`relative z-10 px-8 ${layoutMode === 'grid' ? 'flex flex-col justify-center items-center min-h-screen pt-20 pb-20 overflow-y-auto' : 'flex flex-col justify-end pb-16 flex-1'}`}>
+      <div className={`relative z-10 px-8 ${layoutMode === 'grid' ? 'flex flex-col justify-center items-center flex-1 overflow-y-auto' : 'flex flex-col justify-end pb-16 flex-1'}`}>
         <div className={layoutMode === 'grid' ? 'grid grid-cols-2 justify-items-center w-full max-w-none px-16 gap-y-20' : 'flex gap-6 justify-center max-w-5xl mx-auto'}>
           {buttons.map((button, index) => {
             const Icon = button.icon;

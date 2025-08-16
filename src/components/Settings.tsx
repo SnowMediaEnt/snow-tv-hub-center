@@ -1,11 +1,11 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Layout, Image, Grid2X2, RectangleHorizontal } from 'lucide-react';
+import { ArrowLeft, Layout, Image, RefreshCw } from 'lucide-react';
 import MediaManager from '@/components/MediaManager';
+import AppUpdater from '@/components/AppUpdater';
 
 interface SettingsProps {
   onBack: () => void;
@@ -21,7 +21,7 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-8" style={{ height: '100vh', maxHeight: '100vh', overflowY: 'auto' }}>
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center w-full justify-between">
@@ -45,7 +45,7 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-slate-800/50 border-slate-600">
+          <TabsList className="grid w-full grid-cols-3 bg-slate-800/50 border-slate-600">
             <TabsTrigger value="layout" className="data-[state=active]:bg-brand-gold text-center">
               <Layout className="w-4 h-4 mr-2" />
               Layout
@@ -53,6 +53,10 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
             <TabsTrigger value="media" className="data-[state=active]:bg-brand-gold text-center">
               <Image className="w-4 h-4 mr-2" />
               Media Manager
+            </TabsTrigger>
+            <TabsTrigger value="updates" className="data-[state=active]:bg-brand-gold text-center">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Updates
             </TabsTrigger>
           </TabsList>
 
@@ -95,8 +99,11 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
                   </div>
                 </div>
               </div>
-
             </Card>
+          </TabsContent>
+
+          <TabsContent value="updates" className="mt-6">
+            <AppUpdater />
           </TabsContent>
         </Tabs>
       </div>
