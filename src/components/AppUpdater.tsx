@@ -160,10 +160,18 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
     }
   };
 
-  // Auto-check for updates on component mount
+  // Auto-check for updates on component mount and every minute
   useEffect(() => {
     if (autoCheck) {
       checkForUpdates();
+      
+      // Set up interval to check every minute (60000ms)
+      const interval = setInterval(() => {
+        checkForUpdates();
+      }, 60000);
+      
+      // Cleanup interval on unmount
+      return () => clearInterval(interval);
     }
   }, [autoCheck]);
 
