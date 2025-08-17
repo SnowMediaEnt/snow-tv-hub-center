@@ -77,7 +77,7 @@ const NewsTicker = () => {
     if (!isLoading && newsItems.length > 0) {
       const interval = setInterval(() => {
         setCurrentIndex((prev) => (prev + 1) % newsItems.length);
-      }, 22500); // Match the scroll animation duration (50% slower)
+      }, 33750); // Match the scroll animation duration (75% slower than original)
 
       return () => clearInterval(interval);
     }
