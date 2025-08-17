@@ -341,7 +341,7 @@ const Index = () => {
                 key={index}
                 className={`
                   relative overflow-hidden cursor-pointer border-0 rounded-3xl
-                  ${layoutMode === 'grid' ? 'h-52 aspect-[4/3]' : 'h-32 w-48'}
+                  ${layoutMode === 'grid' ? 'h-56 aspect-[4/3]' : 'h-32 w-48'}
                   ${isFocused 
                     ? 'ring-4 ring-white/60 shadow-2xl scale-105' 
                     : 'shadow-xl'
@@ -358,7 +358,7 @@ const Index = () => {
                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/20 rounded-3xl" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-3xl" />
                 
-                <div className="relative z-10 p-6 h-full flex flex-col items-center justify-center text-center">
+                <div className="relative z-10 p-8 h-full flex flex-col items-center justify-center text-center">
                    <Icon 
                      size={layoutMode === 'grid' ? 64 : 48} 
                      className={`${layoutMode === 'grid' ? 'mb-4' : 'mb-2'} text-white drop-shadow-xl filter`} 
