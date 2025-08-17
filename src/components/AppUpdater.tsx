@@ -22,13 +22,28 @@ interface AppUpdaterProps {
 }
 
 const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
-  const [currentVersion] = useState('1.0.0'); // Current app version
+  const [currentVersion, setCurrentVersion] = useState<string>(''); // Will be fetched dynamically
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const { toast } = useToast();
+
+  // Get current version from your JSON file on first load
+  const getCurrentVersion = async () => {
+    try {
+      // Fetch current version from your JSON (you can update this file)
+      const response = await fetch('/version.json');
+      if (response.ok) {
+        const versionData = await response.json();
+        return versionData.currentVersion || '1.0.0';
+      }
+    } catch (error) {
+      console.log('Could not fetch current version, using default');
+    }
+    return '1.0.0'; // fallback
+  };
 
   const checkForUpdates = async () => {
     if (isChecking) return;
@@ -110,7 +125,7 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
       }
       
       // Compare versions
-      if (data.version !== currentVersion && isVersionNewer(data.version, currentVersion)) {
+      if (data.version !== currentVersion && currentVersion && isVersionNewer(data.version, currentVersion)) {
         setUpdateInfo(data);
         setUpdateAvailable(true);
         
@@ -232,19 +247,26 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
     }
   };
 
-  // Auto-check for updates on component mount and every minute
+  // Load current version and auto-check for updates
   useEffect(() => {
-    if (autoCheck) {
-      checkForUpdates();
+    const initializeVersion = async () => {
+      const version = await getCurrentVersion();
+      setCurrentVersion(version);
       
-      // Set up interval to check every minute (60000ms)
-      const interval = setInterval(() => {
+      if (autoCheck) {
         checkForUpdates();
-      }, 60000);
-      
-      // Cleanup interval on unmount
-      return () => clearInterval(interval);
-    }
+        
+        // Set up interval to check every minute
+        const interval = setInterval(() => {
+          checkForUpdates();
+        }, 60000);
+        
+        // Cleanup interval on unmount
+        return () => clearInterval(interval);
+      }
+    };
+    
+    initializeVersion();
   }, [autoCheck]);
 
   if (!updateAvailable && autoCheck) {
