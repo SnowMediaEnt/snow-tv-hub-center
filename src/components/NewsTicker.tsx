@@ -69,7 +69,7 @@ const NewsTicker = () => {
     if (!isLoading && newsItems.length > 0) {
       const interval = setInterval(() => {
         setCurrentIndex((prev) => (prev + 1) % newsItems.length);
-      }, 4000);
+      }, 15000); // Match the scroll animation duration
 
       return () => clearInterval(interval);
     }
@@ -77,18 +77,18 @@ const NewsTicker = () => {
 
   return (
     <div className="relative z-10 bg-gradient-to-r from-blue-600/60 to-purple-600/60 border-y border-blue-400/30 py-3 overflow-hidden">
-      <div className="flex items-center justify-center">
-        <div className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-bold mr-4">
+      <div className="flex items-center h-12">
+        <div className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-bold ml-4 z-10 flex-shrink-0">
           LIVE
         </div>
-        <div className="flex-1 max-w-4xl">
+        <div className="flex-1 overflow-hidden ml-4">
           <div 
-            className="transition-all duration-500 ease-in-out text-center min-h-[2.5rem] flex items-center justify-center"
+            className="whitespace-nowrap animate-scroll-left"
             key={currentIndex}
           >
-            <p className="text-xl text-white animate-fade-in line-clamp-2">
+            <span className="text-xl text-white font-medium">
               {newsItems[currentIndex]}
-            </p>
+            </span>
           </div>
         </div>
       </div>
