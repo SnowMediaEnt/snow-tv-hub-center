@@ -125,9 +125,17 @@ export const useWixIntegration = () => {
   const fetchWixData = useCallback(async (userEmail: string) => {
     if (!userEmail || loading) return;
     
+    // Throttle Wix calls - only fetch once per minute
+    const lastFetch = localStorage.getItem('lastWixFetch');
+    const now = Date.now();
+    if (lastFetch && (now - parseInt(lastFetch)) < 60000) {
+      return; // Skip if fetched within last minute
+    }
+    
     setLoading(true);
     try {
       console.log('Fetching Wix data for:', userEmail);
+      localStorage.setItem('lastWixFetch', now.toString());
       
       // Try to get existing member
       const memberResult = await verifyWixMember(userEmail);

@@ -29,16 +29,36 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
   const { toast } = useToast();
 
   const checkForUpdates = async () => {
+    if (isChecking) return;
+    
     setIsChecking(true);
     try {
-      // Use CORS proxy to access the update.json file
-      const response = await fetch('https://api.allorigins.win/raw?url=http://104.168.157.178/smc/update.json');
+      // Use CORS proxy to access the update.json file with better error handling
+      const response = await fetch('https://api.allorigins.win/raw?url=http://104.168.157.178/smc/update.json', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
       
       if (!response.ok) {
-        throw new Error('Failed to check for updates');
+        throw new Error(`HTTP ${response.status}: Failed to check for updates`);
       }
       
-      const data: UpdateInfo = await response.json();
+      const text = await response.text();
+      let data: UpdateInfo;
+      
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        throw new Error('Invalid JSON response from update server');
+      }
+      
+      // Validate required fields
+      if (!data.version || !data.downloadUrl) {
+        throw new Error('Invalid update information received');
+      }
       
       // Compare versions (simple string comparison for now)
       if (data.version !== currentVersion && isVersionNewer(data.version, currentVersion)) {
@@ -52,6 +72,7 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
           });
         }
       } else {
+        setUpdateAvailable(false);
         if (!autoCheck) {
           toast({
             title: "No Updates",
@@ -61,10 +82,12 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
       }
     } catch (error) {
       console.error('Update check failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
       if (!autoCheck) {
         toast({
           title: "Update Check Failed",
-          description: "Could not check for updates. Please try again later.",
+          description: errorMessage,
           variant: "destructive",
         });
       }
