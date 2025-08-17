@@ -24,31 +24,48 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
       
       switch (event.key) {
         case 'ArrowLeft':
-          if (activeTab === 'layout' && focusedElement === 4) {
-            setFocusedElement(1); // Move to layout tab
-          } else if (focusedElement > 0) {
-            setFocusedElement(focusedElement - 1);
+          if (focusedElement === 4) {
+            // From layout toggle back to layout tab
+            setFocusedElement(1);
+          } else if (focusedElement === 2) {
+            // From media tab to layout tab
+            setFocusedElement(1);
+          } else if (focusedElement === 3) {
+            // From updates tab to media tab
+            setFocusedElement(2);
           }
           break;
+          
         case 'ArrowRight':
-          if (activeTab === 'layout' && focusedElement === 1) {
-            setFocusedElement(4); // Move to layout toggle
-          } else if (focusedElement < 3) {
-            setFocusedElement(focusedElement + 1);
+          if (focusedElement === 1) {
+            // From layout tab to media tab
+            setFocusedElement(2);
+          } else if (focusedElement === 2) {
+            // From media tab to updates tab
+            setFocusedElement(3);
           }
           break;
+          
         case 'ArrowUp':
-          if (focusedElement > 0 && focusedElement <= 3) {
-            setFocusedElement(0); // Move to back button
+          if (focusedElement === 4) {
+            // From layout toggle back to layout tab
+            setFocusedElement(1);
+          } else if (focusedElement >= 1 && focusedElement <= 3) {
+            // From any tab to back button
+            setFocusedElement(0);
           }
           break;
+          
         case 'ArrowDown':
           if (focusedElement === 0) {
-            setFocusedElement(1); // Move to first tab
-          } else if (focusedElement === 4 && activeTab !== 'layout') {
+            // From back button to layout tab
             setFocusedElement(1);
+          } else if (focusedElement === 1 && activeTab === 'layout') {
+            // From layout tab down to layout toggle (only when on layout tab)
+            setFocusedElement(4);
           }
           break;
+          
         case 'Enter':
         case ' ':
           if (focusedElement === 0) {
@@ -63,6 +80,7 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
             onLayoutChange(layoutMode === 'grid' ? 'row' : 'grid');
           }
           break;
+          
         case 'Escape':
         case 'Backspace':
           onBack();
@@ -76,10 +94,11 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
 
   // Update focused element when tab changes
   useEffect(() => {
-    if (activeTab === 'layout') {
-      setFocusedElement(1);
-    } else {
-      setFocusedElement(1);
+    // When switching tabs via keyboard, keep focus on the tab
+    if (focusedElement >= 1 && focusedElement <= 3) {
+      if (activeTab === 'layout') setFocusedElement(1);
+      else if (activeTab === 'media') setFocusedElement(2);
+      else if (activeTab === 'updates') setFocusedElement(3);
     }
   }, [activeTab]);
 
