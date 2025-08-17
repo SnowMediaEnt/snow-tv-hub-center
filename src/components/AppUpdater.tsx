@@ -38,38 +38,47 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
       // Try multiple update sources
       let data: UpdateInfo | null = null;
       
+      // Try direct fetch first, then CORS proxy
       try {
-        // First, try the main update server
-        const response = await fetch('https://api.allorigins.win/raw?url=http://104.168.157.178/smc/update.json', {
+        console.log('Attempting direct fetch...');
+        const directResponse = await fetch('http://104.168.157.178/smc/update.json', {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
           },
-          signal: AbortSignal.timeout(8000) // 8 second timeout
+          signal: AbortSignal.timeout(5000)
         });
         
-        if (response.ok) {
-          const text = await response.text();
-          console.log('Update server response:', text);
+        if (directResponse.ok) {
+          const text = await directResponse.text();
+          console.log('Direct server response:', text);
+          data = JSON.parse(text);
+        } else {
+          throw new Error('Direct fetch failed');
+        }
+      } catch (directError) {
+        console.log('Direct fetch failed, trying CORS proxy:', directError);
+        
+        try {
+          const proxyResponse = await fetch('https://api.allorigins.win/raw?url=http://104.168.157.178/smc/update.json', {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+            },
+            signal: AbortSignal.timeout(8000)
+          });
           
-          // Check if response looks like JSON
-          if (text.trim().startsWith('{') && text.trim().endsWith('}')) {
+          if (proxyResponse.ok) {
+            const text = await proxyResponse.text();
+            console.log('Proxy server response:', text);
             data = JSON.parse(text);
           } else {
-            throw new Error('Response is not valid JSON format');
+            throw new Error('Proxy fetch failed');
           }
+        } catch (proxyError) {
+          console.log('Both direct and proxy fetch failed:', proxyError);
+          throw new Error('Unable to fetch update information from server');
         }
-      } catch (error) {
-        console.log('Primary update server failed, using fallback:', error);
-        
-        // Fallback to mock update data
-        data = {
-          version: '2.1.0',
-          changelog: 'Latest improvements and bug fixes',
-          downloadUrl: 'https://github.com/snowmedia-dev/releases/snow-media-center-v2.1.0.apk',
-          releaseDate: new Date().toISOString(),
-          size: '45.2 MB'
-        };
       }
       
       if (!data || !data.version || !data.downloadUrl) {
