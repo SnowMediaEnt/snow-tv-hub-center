@@ -49,7 +49,7 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
       for (const proxy of corsProxies) {
         try {
           console.log(`Trying proxy: ${proxy}`);
-          let url = proxy + encodeURIComponent('http://104.168.157.178/smc/update.json');
+          let url = proxy + encodeURIComponent('https://snowmediaapps.com/smc/update.json');
           
           // Handle different proxy response formats
           const isAllOrigins = proxy.includes('allorigins.win');

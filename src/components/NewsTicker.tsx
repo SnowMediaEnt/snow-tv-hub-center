@@ -11,9 +11,9 @@ const NewsTicker = () => {
   useEffect(() => {
     const fetchRSSFeed = async () => {
       try {
-        console.log('Fetching RSS feed from: http://104.168.157.178/smc/newsfeed.xml');
+        console.log('Fetching RSS feed from: https://snowmediaapps.com/smc/newsfeed.xml');
         // Using a CORS proxy to fetch the RSS feed
-        const response = await fetch(`https://api.allorigins.win/raw?url=http://104.168.157.178/smc/newsfeed.xml`);
+        const response = await fetch(`https://api.allorigins.win/raw?url=https://snowmediaapps.com/smc/newsfeed.xml`);
         const xmlText = await response.text();
         console.log('RSS feed XML response:', xmlText);
         
