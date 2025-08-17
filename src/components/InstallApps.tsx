@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,8 +34,81 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
   const [downloadedApps, setDownloadedApps] = useState<Set<string>>(new Set());
   const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
   const [currentDownload, setCurrentDownload] = useState<App | null>(null);
+  const [focusedElement, setFocusedElement] = useState<'back' | 'tab-0' | 'tab-1' | 'tab-2' | 'tab-3' | string>('back');
+  const [activeTab, setActiveTab] = useState<string>('featured');
   const { toast } = useToast();
   const { apps, loading, error } = useApps();
+
+  // TV Remote Navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      event.preventDefault();
+      
+      switch (event.key) {
+        case 'ArrowLeft':
+          if (focusedElement === 'tab-1') setFocusedElement('tab-0');
+          else if (focusedElement === 'tab-2') setFocusedElement('tab-1');
+          else if (focusedElement === 'tab-3') setFocusedElement('tab-2');
+          else if (focusedElement.startsWith('app-')) setFocusedElement('back');
+          break;
+          
+        case 'ArrowRight':
+          if (focusedElement === 'tab-0') setFocusedElement('tab-1');
+          else if (focusedElement === 'tab-1') setFocusedElement('tab-2');
+          else if (focusedElement === 'tab-2') setFocusedElement('tab-3');
+          else if (focusedElement === 'back') {
+            const currentCategoryApps = getCategoryApps(activeTab);
+            if (currentCategoryApps.length > 0) setFocusedElement(`app-${currentCategoryApps[0].id}`);
+          }
+          break;
+          
+        case 'ArrowUp':
+          if (focusedElement.startsWith('app-')) {
+            const currentCategoryApps = getCategoryApps(activeTab);
+            const currentIndex = currentCategoryApps.findIndex(app => focusedElement === `app-${app.id}`);
+            if (currentIndex >= 2) {
+              setFocusedElement(`app-${currentCategoryApps[currentIndex - 2].id}`);
+            } else {
+              setFocusedElement('tab-0');
+            }
+          } else if (focusedElement.startsWith('tab-')) {
+            setFocusedElement('back');
+          }
+          break;
+          
+        case 'ArrowDown':
+          if (focusedElement === 'back') setFocusedElement('tab-0');
+          else if (focusedElement.startsWith('tab-')) {
+            const currentCategoryApps = getCategoryApps(activeTab);
+            if (currentCategoryApps.length > 0) setFocusedElement(`app-${currentCategoryApps[0].id}`);
+          } else if (focusedElement.startsWith('app-')) {
+            const currentCategoryApps = getCategoryApps(activeTab);
+            const currentIndex = currentCategoryApps.findIndex(app => focusedElement === `app-${app.id}`);
+            if (currentIndex + 2 < currentCategoryApps.length) {
+              setFocusedElement(`app-${currentCategoryApps[currentIndex + 2].id}`);
+            }
+          }
+          break;
+          
+        case 'Enter':
+        case ' ':
+          if (focusedElement === 'back') onBack();
+          else if (focusedElement === 'tab-0') setActiveTab('featured');
+          else if (focusedElement === 'tab-1') setActiveTab('streaming');
+          else if (focusedElement === 'tab-2') setActiveTab('support');
+          else if (focusedElement === 'tab-3') setActiveTab('other');
+          break;
+          
+        case 'Escape':
+        case 'Backspace':
+          onBack();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusedElement, activeTab, onBack, apps]);
 
   const handleDownload = async (app: App) => {
     setCurrentDownload(app);
@@ -347,7 +420,7 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
         const isInstalled = installedApps.has(app.id);
         
         return (
-          <Card key={app.id} className="bg-gradient-to-br from-slate-700 to-slate-800 border-slate-600 overflow-hidden hover:scale-105 transition-all duration-300">
+          <Card key={app.id} className={`bg-gradient-to-br from-slate-700 to-slate-800 border-slate-600 overflow-hidden hover:scale-105 transition-all duration-300 ${focusedElement === `app-${app.id}` ? 'ring-2 ring-brand-ice scale-105' : ''}`}>
             <div className="p-6">
               <div className="flex items-start gap-4 mb-4">
                 <div className="w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl flex items-center justify-center overflow-hidden">
@@ -467,15 +540,15 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center w-full justify-between">
-            <Button 
-              onClick={onBack}
-              variant="gold" 
-              size="lg"
-              className=""
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Home
-            </Button>
+          <Button 
+            onClick={onBack}
+            variant="gold" 
+            size="lg"
+            className={focusedElement === 'back' ? 'ring-2 ring-brand-ice' : ''}
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Back to Home
+          </Button>
             <div className="invisible">
               <Button variant="gold" size="lg">Placeholder</Button>
             </div>
@@ -486,15 +559,24 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
           </div>
         </div>
 
-        <Tabs defaultValue="featured" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-8 bg-slate-800/50 border-slate-600">
-            <TabsTrigger value="featured" className="text-white data-[state=active]:bg-brand-gold text-center">
+            <TabsTrigger 
+              value="featured" 
+              className={`text-white data-[state=active]:bg-brand-gold text-center ${focusedElement === 'tab-0' ? 'ring-2 ring-brand-ice' : ''}`}
+            >
               Featured ({getCategoryApps('featured').length})
             </TabsTrigger>
-            <TabsTrigger value="streaming" className="text-white data-[state=active]:bg-brand-gold text-center">
+            <TabsTrigger 
+              value="streaming" 
+              className={`text-white data-[state=active]:bg-brand-gold text-center ${focusedElement === 'tab-1' ? 'ring-2 ring-brand-ice' : ''}`}
+            >
               Streaming ({getCategoryApps('streaming').length})
             </TabsTrigger>
-            <TabsTrigger value="support" className="text-white data-[state=active]:bg-brand-gold text-center">
+            <TabsTrigger 
+              value="support" 
+              className={`text-white data-[state=active]:bg-brand-gold text-center ${focusedElement === 'tab-2' ? 'ring-2 ring-brand-ice' : ''}`}
+            >
               Support ({getCategoryApps('support').length})
             </TabsTrigger>
           </TabsList>

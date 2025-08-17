@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,90 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<WixProduct | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [focusedElement, setFocusedElement] = useState<'back' | 'signin' | 'cart' | string>('back');
+
+  // TV Remote Navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      event.preventDefault();
+      
+      const filteredProducts = getFilteredProducts();
+      
+      switch (event.key) {
+        case 'ArrowLeft':
+          if (focusedElement.startsWith('product-')) {
+            const currentIndex = filteredProducts.findIndex(p => focusedElement === `product-${p.id}`);
+            if (currentIndex > 0) {
+              setFocusedElement(`product-${filteredProducts[currentIndex - 1].id}`);
+            } else {
+              setFocusedElement('back');
+            }
+          } else if (focusedElement === 'cart') {
+            setFocusedElement('signin');
+          } else if (focusedElement === 'signin') {
+            setFocusedElement('back');
+          }
+          break;
+          
+        case 'ArrowRight':
+          if (focusedElement === 'back') {
+            setFocusedElement(user ? 'cart' : 'signin');
+          } else if (focusedElement === 'signin') {
+            setFocusedElement('cart');
+          } else if (focusedElement.startsWith('product-')) {
+            const currentIndex = filteredProducts.findIndex(p => focusedElement === `product-${p.id}`);
+            if (currentIndex < filteredProducts.length - 1) {
+              setFocusedElement(`product-${filteredProducts[currentIndex + 1].id}`);
+            }
+          }
+          break;
+          
+        case 'ArrowUp':
+          if (focusedElement.startsWith('product-')) {
+            const currentIndex = filteredProducts.findIndex(p => focusedElement === `product-${p.id}`);
+            if (currentIndex >= 4) {
+              setFocusedElement(`product-${filteredProducts[currentIndex - 4].id}`);
+            } else {
+              setFocusedElement('back');
+            }
+          }
+          break;
+          
+        case 'ArrowDown':
+          if (focusedElement === 'back' || focusedElement === 'signin' || focusedElement === 'cart') {
+            if (filteredProducts.length > 0) setFocusedElement(`product-${filteredProducts[0].id}`);
+          } else if (focusedElement.startsWith('product-')) {
+            const currentIndex = filteredProducts.findIndex(p => focusedElement === `product-${p.id}`);
+            if (currentIndex + 4 < filteredProducts.length) {
+              setFocusedElement(`product-${filteredProducts[currentIndex + 4].id}`);
+            }
+          }
+          break;
+          
+        case 'Enter':
+        case ' ':
+          if (focusedElement === 'back') onBack();
+          else if (focusedElement === 'signin') navigate('/auth');
+          else if (focusedElement.startsWith('product-')) {
+            const product = filteredProducts.find(p => focusedElement === `product-${p.id}`);
+            if (product) setSelectedProduct(product);
+          }
+          break;
+          
+        case 'Escape':
+        case 'Backspace':
+          if (selectedProduct) {
+            setSelectedProduct(null);
+          } else {
+            onBack();
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusedElement, selectedProduct, onBack, navigate, user, products, selectedCategory]);
 
   const cartItems = cart.items;
   const cartTotal = cartItems.reduce((total, item) => total + (item.price * item.cartQuantity), 0);
@@ -228,7 +312,7 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
               onClick={onBack}
               variant="gold" 
               size="lg"
-              className=""
+              className={focusedElement === 'back' ? 'ring-2 ring-brand-ice' : ''}
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
               Back to Home
@@ -255,7 +339,7 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
               onClick={() => navigate('/auth')}
               variant="outline"
               size="sm"
-              className="bg-blue-600/20 border-blue-500/50 text-white hover:bg-blue-600/30"
+              className={`bg-blue-600/20 border-blue-500/50 text-white hover:bg-blue-600/30 ${focusedElement === 'signin' ? 'ring-2 ring-brand-ice' : ''}`}
             >
               <LogIn className="w-4 h-4 mr-2" />
               Sign In
@@ -264,7 +348,7 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
           <Button
             variant="outline"
             size="lg"
-            className="bg-green-600/20 border-green-500/50 text-white hover:bg-green-600/30"
+            className={`bg-green-600/20 border-green-500/50 text-white hover:bg-green-600/30 ${focusedElement === 'cart' ? 'ring-2 ring-brand-ice' : ''}`}
           >
             <ShoppingCart className="w-5 h-5 mr-2" />
             Cart ({cartItems.length})
@@ -406,7 +490,7 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
                 const isInCart = !!cartItem;
                 
                 return (
-                  <Card key={product.id} className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 border-blue-500/30 overflow-hidden hover:from-blue-600/30 hover:to-purple-600/30 transition-all duration-300">
+                  <Card key={product.id} className={`bg-gradient-to-br from-blue-600/20 to-purple-600/20 border-blue-500/30 overflow-hidden hover:from-blue-600/30 hover:to-purple-600/30 transition-all duration-300 ${focusedElement === `product-${product.id}` ? 'ring-2 ring-brand-ice scale-105' : ''}`}>
                     <div className="relative">
                       <img 
                         src={product.images[0]} 

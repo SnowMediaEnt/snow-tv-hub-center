@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -14,6 +14,96 @@ interface SupportVideosProps {
 const SupportVideos = ({ onBack }: SupportVideosProps) => {
   const { videos, loading, error } = useVimeoVideos();
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [focusedElement, setFocusedElement] = useState<'back' | 'tab-0' | 'tab-1' | 'tab-2' | string>('back');
+  const [activeTab, setActiveTab] = useState<string>('device');
+
+  // TV Remote Navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      event.preventDefault();
+      
+      const { deviceVideos, serviceVideos, otherVideos } = categorizeVideos();
+      const currentVideos = activeTab === 'device' ? deviceVideos : 
+                           activeTab === 'service' ? serviceVideos : otherVideos;
+      
+      switch (event.key) {
+        case 'ArrowLeft':
+          if (focusedElement === 'tab-1') setFocusedElement('tab-0');
+          else if (focusedElement === 'tab-2') setFocusedElement('tab-1');
+          else if (focusedElement.startsWith('video-')) {
+            const currentIndex = currentVideos.findIndex(video => focusedElement === `video-${video.id}`);
+            if (currentIndex > 0 && currentIndex % 2 === 1) {
+              setFocusedElement(`video-${currentVideos[currentIndex - 1].id}`);
+            } else {
+              setFocusedElement('back');
+            }
+          }
+          break;
+          
+        case 'ArrowRight':
+          if (focusedElement === 'tab-0') setFocusedElement('tab-1');
+          else if (focusedElement === 'tab-1') setFocusedElement('tab-2');
+          else if (focusedElement === 'back') {
+            if (currentVideos.length > 0) setFocusedElement(`video-${currentVideos[0].id}`);
+          } else if (focusedElement.startsWith('video-')) {
+            const currentIndex = currentVideos.findIndex(video => focusedElement === `video-${video.id}`);
+            if (currentIndex < currentVideos.length - 1 && currentIndex % 2 === 0) {
+              setFocusedElement(`video-${currentVideos[currentIndex + 1].id}`);
+            }
+          }
+          break;
+          
+        case 'ArrowUp':
+          if (focusedElement.startsWith('video-')) {
+            const currentIndex = currentVideos.findIndex(video => focusedElement === `video-${video.id}`);
+            if (currentIndex >= 2) {
+              setFocusedElement(`video-${currentVideos[currentIndex - 2].id}`);
+            } else {
+              setFocusedElement('tab-0');
+            }
+          } else if (focusedElement.startsWith('tab-')) {
+            setFocusedElement('back');
+          }
+          break;
+          
+        case 'ArrowDown':
+          if (focusedElement === 'back') setFocusedElement('tab-0');
+          else if (focusedElement.startsWith('tab-')) {
+            if (currentVideos.length > 0) setFocusedElement(`video-${currentVideos[0].id}`);
+          } else if (focusedElement.startsWith('video-')) {
+            const currentIndex = currentVideos.findIndex(video => focusedElement === `video-${video.id}`);
+            if (currentIndex + 2 < currentVideos.length) {
+              setFocusedElement(`video-${currentVideos[currentIndex + 2].id}`);
+            }
+          }
+          break;
+          
+        case 'Enter':
+        case ' ':
+          if (focusedElement === 'back') onBack();
+          else if (focusedElement === 'tab-0') setActiveTab('device');
+          else if (focusedElement === 'tab-1') setActiveTab('service');
+          else if (focusedElement === 'tab-2') setActiveTab('other');
+          else if (focusedElement.startsWith('video-')) {
+            const video = currentVideos.find(v => focusedElement === `video-${v.id}`);
+            if (video) handleVideoClick(video.embed_url);
+          }
+          break;
+          
+        case 'Escape':
+        case 'Backspace':
+          if (selectedVideo) {
+            handleCloseVideo();
+          } else {
+            onBack();
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusedElement, activeTab, selectedVideo, videos, onBack]);
 
   const handleVideoClick = (embedUrl: string) => {
     // Add fullscreen parameters to the embed URL
@@ -53,7 +143,7 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
   const renderVideoGrid = (videoList: typeof videos) => (
     <div className="grid grid-cols-2 gap-6">
       {videoList.map((video) => (
-        <Card key={video.id} className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 overflow-hidden hover:scale-105 transition-all duration-300">
+        <Card key={video.id} className={`bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 overflow-hidden hover:scale-105 transition-all duration-300 ${focusedElement === `video-${video.id}` ? 'ring-2 ring-brand-ice scale-105' : ''}`}>
           <div className="relative">
             <img 
               src={video.thumbnail} 
@@ -135,7 +225,7 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
               onClick={onBack}
               variant="gold" 
               size="lg"
-              className=""
+              className={focusedElement === 'back' ? 'ring-2 ring-brand-ice' : ''}
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
               Back to Home
@@ -155,15 +245,24 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
             <p className="text-xl text-slate-400">No videos found. Upload some videos to your Vimeo account to see them here.</p>
           </div>
         ) : (
-          <Tabs defaultValue="device" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-8 bg-slate-800/50 border-slate-600">
-              <TabsTrigger value="device" className="text-white data-[state=active]:bg-brand-gold text-center">
+              <TabsTrigger 
+                value="device" 
+                className={`text-white data-[state=active]:bg-brand-gold text-center ${focusedElement === 'tab-0' ? 'ring-2 ring-brand-ice' : ''}`}
+              >
                 Device ({deviceVideos.length})
               </TabsTrigger>
-              <TabsTrigger value="service" className="text-white data-[state=active]:bg-brand-gold text-center">
+              <TabsTrigger 
+                value="service" 
+                className={`text-white data-[state=active]:bg-brand-gold text-center ${focusedElement === 'tab-1' ? 'ring-2 ring-brand-ice' : ''}`}
+              >
                 Service ({serviceVideos.length})
               </TabsTrigger>
-              <TabsTrigger value="other" className="text-white data-[state=active]:bg-brand-gold text-center">
+              <TabsTrigger 
+                value="other" 
+                className={`text-white data-[state=active]:bg-brand-gold text-center ${focusedElement === 'tab-2' ? 'ring-2 ring-brand-ice' : ''}`}
+              >
                 Other ({otherVideos.length})
               </TabsTrigger>
             </TabsList>
