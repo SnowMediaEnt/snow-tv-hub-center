@@ -333,15 +333,8 @@ const Index = () => {
       <div className={`relative z-10 px-8 mt-8 ${layoutMode === 'grid' ? 'flex flex-col justify-center items-center flex-1 overflow-y-auto' : 'flex flex-col justify-end pb-16 flex-1'}`}>
         <div className={layoutMode === 'grid' ? 'grid grid-cols-2 justify-items-center w-full max-w-none px-16 gap-y-20' : 'flex gap-6 justify-center max-w-5xl mx-auto'}>
           {buttons.map((button, index) => {
-            const Icon = button.icon;
+            const IconComponent = button.icon;
             const isFocused = focusedButton === index;
-            
-            // Debug logging for icon positioning
-            console.log(`Button ${index} (${button.title}):`, {
-              icon: Icon.name,
-              focused: isFocused,
-              layoutMode
-            });
             
             return (
               <Card
@@ -366,10 +359,10 @@ const Index = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-3xl" />
                 
                 <div className="relative z-10 p-6 h-full flex flex-col items-center justify-center text-center">
-                   <Icon 
-                     size={layoutMode === 'grid' ? 64 : 48} 
-                     className={`${layoutMode === 'grid' ? 'mb-4' : 'mb-2'} text-white drop-shadow-xl filter flex-shrink-0`} 
-                   />
+                  <IconComponent 
+                    size={layoutMode === 'grid' ? 64 : 48} 
+                    className={`${layoutMode === 'grid' ? 'mb-4' : 'mb-2'} text-white drop-shadow-xl`} 
+                  />
                   <h3 className={`${layoutMode === 'grid' ? 'text-xl' : 'text-lg'} font-bold mb-2 text-white leading-tight text-shadow-strong font-quicksand`}>
                     {button.title}
                   </h3>
