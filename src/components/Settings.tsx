@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,6 +15,73 @@ interface SettingsProps {
 
 const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
   const [activeTab, setActiveTab] = useState('layout');
+  const [focusedElement, setFocusedElement] = useState(0); // 0: back button, 1-3: tabs, 4: layout toggle
+
+  // Android TV/Firestick navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      event.preventDefault();
+      
+      switch (event.key) {
+        case 'ArrowLeft':
+          if (activeTab === 'layout' && focusedElement === 4) {
+            setFocusedElement(1); // Move to layout tab
+          } else if (focusedElement > 0) {
+            setFocusedElement(focusedElement - 1);
+          }
+          break;
+        case 'ArrowRight':
+          if (activeTab === 'layout' && focusedElement === 1) {
+            setFocusedElement(4); // Move to layout toggle
+          } else if (focusedElement < 3) {
+            setFocusedElement(focusedElement + 1);
+          }
+          break;
+        case 'ArrowUp':
+          if (focusedElement > 0 && focusedElement <= 3) {
+            setFocusedElement(0); // Move to back button
+          }
+          break;
+        case 'ArrowDown':
+          if (focusedElement === 0) {
+            setFocusedElement(1); // Move to first tab
+          } else if (focusedElement === 4 && activeTab !== 'layout') {
+            setFocusedElement(1);
+          }
+          break;
+        case 'Enter':
+        case ' ':
+          if (focusedElement === 0) {
+            onBack();
+          } else if (focusedElement === 1) {
+            setActiveTab('layout');
+          } else if (focusedElement === 2) {
+            setActiveTab('media');
+          } else if (focusedElement === 3) {
+            setActiveTab('updates');
+          } else if (focusedElement === 4 && activeTab === 'layout') {
+            onLayoutChange(layoutMode === 'grid' ? 'row' : 'grid');
+          }
+          break;
+        case 'Escape':
+        case 'Backspace':
+          onBack();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusedElement, activeTab, layoutMode, onBack, onLayoutChange]);
+
+  // Update focused element when tab changes
+  useEffect(() => {
+    if (activeTab === 'layout') {
+      setFocusedElement(1);
+    } else {
+      setFocusedElement(1);
+    }
+  }, [activeTab]);
 
   if (activeTab === 'media') {
     return <MediaManager onBack={() => setActiveTab('layout')} />;
@@ -29,7 +96,9 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
               onClick={onBack}
               variant="gold" 
               size="lg"
-              className=""
+              className={`transition-all duration-200 ${
+                focusedElement === 0 ? 'ring-4 ring-white/60 scale-105' : ''
+              }`}
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
               Back to Home
@@ -46,15 +115,30 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-slate-800/50 border-slate-600">
-            <TabsTrigger value="layout" className="data-[state=active]:bg-brand-gold text-center">
+            <TabsTrigger 
+              value="layout" 
+              className={`data-[state=active]:bg-brand-gold text-center transition-all duration-200 ${
+                focusedElement === 1 ? 'ring-4 ring-white/60 scale-105' : ''
+              }`}
+            >
               <Layout className="w-4 h-4 mr-2" />
               Layout
             </TabsTrigger>
-            <TabsTrigger value="media" className="data-[state=active]:bg-brand-gold text-center">
+            <TabsTrigger 
+              value="media" 
+              className={`data-[state=active]:bg-brand-gold text-center transition-all duration-200 ${
+                focusedElement === 2 ? 'ring-4 ring-white/60 scale-105' : ''
+              }`}
+            >
               <Image className="w-4 h-4 mr-2" />
               Media Manager
             </TabsTrigger>
-            <TabsTrigger value="updates" className="data-[state=active]:bg-brand-gold text-center">
+            <TabsTrigger 
+              value="updates" 
+              className={`data-[state=active]:bg-brand-gold text-center transition-all duration-200 ${
+                focusedElement === 3 ? 'ring-4 ring-white/60 scale-105' : ''
+              }`}
+            >
               <RefreshCw className="w-4 h-4 mr-2" />
               Updates
             </TabsTrigger>
@@ -66,7 +150,9 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
               
               <div className="flex items-center justify-center">
                 <div 
-                  className="flex bg-slate-800 rounded-lg p-2 cursor-pointer transition-all duration-200 hover:bg-slate-700"
+                  className={`flex bg-slate-800 rounded-lg p-2 cursor-pointer transition-all duration-200 hover:bg-slate-700 ${
+                    focusedElement === 4 ? 'ring-4 ring-white/60 scale-105' : ''
+                  }`}
                   onClick={() => onLayoutChange(layoutMode === 'grid' ? 'row' : 'grid')}
                 >
                   {/* Grid Layout Option */}

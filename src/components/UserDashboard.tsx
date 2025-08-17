@@ -23,6 +23,69 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
   const { wixProfile, wixOrders, wixReferrals, loading: wixLoading, fetchWixData } = useWixIntegration();
   const { toast } = useToast();
   const [showPurchase, setShowPurchase] = useState(false);
+  const [focusedElement, setFocusedElement] = useState(0); // 0: back, 1: sign out, 2-5: tabs, 6-7: action buttons
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // Android TV/Firestick navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      event.preventDefault();
+      
+      switch (event.key) {
+        case 'ArrowLeft':
+          if (focusedElement > 0) {
+            setFocusedElement(focusedElement - 1);
+          }
+          break;
+        case 'ArrowRight':
+          if (focusedElement < 7) {
+            setFocusedElement(focusedElement + 1);
+          }
+          break;
+        case 'ArrowUp':
+          if (focusedElement >= 6) {
+            setFocusedElement(focusedElement - 4); // Move from action buttons to tabs
+          } else if (focusedElement >= 2) {
+            setFocusedElement(focusedElement - 2); // Move from tabs to header buttons
+          }
+          break;
+        case 'ArrowDown':
+          if (focusedElement <= 1) {
+            setFocusedElement(focusedElement + 2); // Move from header to tabs
+          } else if (focusedElement <= 5) {
+            setFocusedElement(Math.min(focusedElement + 4, 7)); // Move from tabs to action buttons
+          }
+          break;
+        case 'Enter':
+        case ' ':
+          if (focusedElement === 0) {
+            onViewChange('home');
+          } else if (focusedElement === 1) {
+            handleSignOut();
+          } else if (focusedElement === 2) {
+            setActiveTab('overview');
+          } else if (focusedElement === 3) {
+            setActiveTab('credits');
+          } else if (focusedElement === 4) {
+            setActiveTab('store');
+          } else if (focusedElement === 5) {
+            setActiveTab('referrals');
+          } else if (focusedElement === 6) {
+            onCreditStore();
+          } else if (focusedElement === 7) {
+            onCommunityChat();
+          }
+          break;
+        case 'Escape':
+        case 'Backspace':
+          onViewChange('home');
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusedElement, activeTab, onViewChange, onCreditStore, onCommunityChat]);
 
   // Fetch Wix data when user changes
   useEffect(() => {
@@ -69,7 +132,9 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
               onClick={() => onViewChange('home')}
               variant="gold" 
               size="lg"
-              className=""
+              className={`transition-all duration-200 ${
+                focusedElement === 0 ? 'ring-4 ring-white/60 scale-105' : ''
+              }`}
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
               Back to Home
@@ -77,7 +142,9 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
             <Button 
               onClick={handleSignOut}
               variant="outline" 
-              className="bg-red-600 border-red-500 text-white hover:bg-red-700"
+              className={`bg-red-600 border-red-500 text-white hover:bg-red-700 transition-all duration-200 ${
+                focusedElement === 1 ? 'ring-4 ring-white/60 scale-105' : ''
+              }`}
             >
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
@@ -127,7 +194,9 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
           <Button 
             onClick={onCreditStore}
             size="lg"
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className={`bg-green-600 hover:bg-green-700 text-white transition-all duration-200 ${
+              focusedElement === 6 ? 'ring-4 ring-white/60 scale-105' : ''
+            }`}
           >
             <Plus className="w-5 h-5 mr-2" />
             Purchase Credits
@@ -136,7 +205,9 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
             onClick={onCommunityChat}
             size="lg"
             variant="outline"
-            className="bg-blue-600/20 border-blue-500/50 text-white hover:bg-blue-600/30"
+            className={`bg-blue-600/20 border-blue-500/50 text-white hover:bg-blue-600/30 transition-all duration-200 ${
+              focusedElement === 7 ? 'ring-4 ring-white/60 scale-105' : ''
+            }`}
           >
             <MessageCircle className="w-5 h-5 mr-2" />
             Community Chat
@@ -144,18 +215,38 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
         </div>
 
         {/* Dashboard Tabs */}
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-8 bg-slate-800/50 border-slate-600">
-            <TabsTrigger value="overview" className="text-white data-[state=active]:bg-brand-gold text-center">
+            <TabsTrigger 
+              value="overview" 
+              className={`text-white data-[state=active]:bg-brand-gold text-center transition-all duration-200 ${
+                focusedElement === 2 ? 'ring-4 ring-white/60 scale-105' : ''
+              }`}
+            >
               Overview
             </TabsTrigger>
-            <TabsTrigger value="credits" className="text-white data-[state=active]:bg-brand-gold text-center">
+            <TabsTrigger 
+              value="credits" 
+              className={`text-white data-[state=active]:bg-brand-gold text-center transition-all duration-200 ${
+                focusedElement === 3 ? 'ring-4 ring-white/60 scale-105' : ''
+              }`}
+            >
               App Credits
             </TabsTrigger>
-            <TabsTrigger value="store" className="text-white data-[state=active]:bg-brand-gold text-center">
+            <TabsTrigger 
+              value="store" 
+              className={`text-white data-[state=active]:bg-brand-gold text-center transition-all duration-200 ${
+                focusedElement === 4 ? 'ring-4 ring-white/60 scale-105' : ''
+              }`}
+            >
               Store Account
             </TabsTrigger>
-            <TabsTrigger value="referrals" className="text-white data-[state=active]:bg-brand-gold text-center">
+            <TabsTrigger 
+              value="referrals" 
+              className={`text-white data-[state=active]:bg-brand-gold text-center transition-all duration-200 ${
+                focusedElement === 5 ? 'ring-4 ring-white/60 scale-105' : ''
+              }`}
+            >
               Referrals
             </TabsTrigger>
           </TabsList>
