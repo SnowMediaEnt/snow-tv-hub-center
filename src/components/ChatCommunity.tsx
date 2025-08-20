@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Send, User, MessageSquare, Brain, Loader2, Mic, MicOff, ExternalLink } from 'lucide-react';
+import VoiceInput from '@/components/VoiceInput';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +27,7 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
   const [aiLoading, setAiLoading] = useState(false);
   const [adminLoading, setAdminLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [focusedElement, setFocusedElement] = useState<'back' | 'tab-0' | 'tab-1' | 'tab-2' | 'send' | 'voice' | string>('back');
   
   const { user } = useAuth();
   const { profile, checkCredits, deductCredits } = useUserProfile();
@@ -261,7 +263,7 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
               onClick={onBack}
               variant="gold" 
               size="lg"
-              className=""
+              className={focusedElement === 'back' ? 'ring-2 ring-brand-ice' : ''}
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
               Back to Home
@@ -281,7 +283,7 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
           <Button
             onClick={() => setActiveTab('admin')}
             variant={activeTab === 'admin' ? 'default' : 'outline'}
-            className={`text-lg px-6 py-3 ${
+            className={`text-lg px-6 py-3 ${focusedElement === 'tab-0' ? 'ring-2 ring-white' : ''} ${
               activeTab === 'admin' 
                 ? 'bg-brand-gold hover:bg-brand-gold/80' 
                 : 'bg-transparent border-brand-gold text-brand-gold hover:bg-brand-gold'
@@ -293,7 +295,7 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
           <Button
             onClick={() => setActiveTab('community')}
             variant={activeTab === 'community' ? 'default' : 'outline'}
-            className={`text-lg px-6 py-3 ${
+            className={`text-lg px-6 py-3 ${focusedElement === 'tab-1' ? 'ring-2 ring-white' : ''} ${
               activeTab === 'community' 
                 ? 'bg-green-600 hover:bg-green-700' 
                 : 'bg-transparent border-green-500 text-green-400 hover:bg-green-600'
@@ -305,7 +307,7 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
           <Button
             onClick={() => setActiveTab('ai')}
             variant={activeTab === 'ai' ? 'default' : 'outline'}
-            className={`text-lg px-6 py-3 ${
+            className={`text-lg px-6 py-3 ${focusedElement === 'tab-2' ? 'ring-2 ring-white' : ''} ${
               activeTab === 'ai' 
                 ? 'bg-purple-600 hover:bg-purple-700' 
                 : 'bg-transparent border-purple-500 text-purple-400 hover:bg-purple-600'
@@ -350,7 +352,7 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
               <Button 
                 onClick={sendAdminMessage}
                 disabled={adminLoading || !adminMessage.trim() || !adminSubject.trim() || !user}
-                className="bg-brand-gold hover:bg-brand-gold/80 text-white text-lg px-8 py-3"
+                className={`bg-brand-gold hover:bg-brand-gold/80 text-white text-lg px-8 py-3 ${focusedElement === 'send' && activeTab === 'admin' ? 'ring-2 ring-white' : ''}`}
               >
                 {adminLoading ? (
                   <>
@@ -473,7 +475,7 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
               </div>
               
               {/* AI Input */}
-              <div className="flex gap-4">
+              <div className="flex gap-2">
                 <Input 
                   value={aiMessage}
                   onChange={(e) => setAiMessage(e.target.value)}
@@ -486,10 +488,14 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
                     }
                   }}
                 />
+                <VoiceInput 
+                  onTranscription={(text) => setAiMessage(text)}
+                  className={focusedElement === 'voice' ? 'ring-2 ring-white' : ''}
+                />
                 <Button 
                   onClick={sendAiMessage}
                   disabled={aiLoading || !aiMessage.trim() || !user}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3"
+                  className={`bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 ${focusedElement === 'send' && activeTab === 'ai' ? 'ring-2 ring-white' : ''}`}
                 >
                   {aiLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />

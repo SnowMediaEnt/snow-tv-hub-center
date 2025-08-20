@@ -32,12 +32,19 @@ export const useNavigation = (initialView: string = 'home') => {
           const now = Date.now();
           if (now - lastBackPressTime < 1000) {
             // Double press detected within 1 second
-            if (window.navigator && 'app' in window.navigator) {
-              // For mobile apps
-              (window.navigator as any).app.exitApp();
-            } else {
-              // For web/desktop
-              window.close();
+            try {
+              if (window.navigator && 'app' in window.navigator) {
+                // For mobile apps
+                (window.navigator as any).app.exitApp();
+              } else if ((window as any).Android && (window as any).Android.exitApp) {
+                // For Android WebView
+                (window as any).Android.exitApp();
+              } else {
+                // For web/desktop
+                window.close();
+              }
+            } catch (error) {
+              console.log('Exit app failed:', error);
             }
             return prev;
           } else {

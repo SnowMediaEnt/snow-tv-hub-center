@@ -57,14 +57,25 @@ const Index = () => {
   // Handle keyboard navigation for TV remote
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      event.preventDefault(); // Always prevent default to avoid native app closing
+      // Handle both standard back buttons and Android hardware back button
+      if (event.key === 'Escape' || event.key === 'Backspace' || 
+          event.keyCode === 4 || event.which === 4) { // Android back button
+        event.preventDefault();
+        event.stopPropagation();
+        
+        if (currentView !== 'home') {
+          goBack();
+          return;
+        }
+      }
       
       if (currentView !== 'home') {
-        // When in a section, only handle back navigation
-        if (event.key === 'Escape' || event.key === 'Backspace') {
-          goBack();
-        }
-        return;
+        return; // Let individual components handle their own navigation
+      }
+      
+      // Prevent default for navigation keys on home screen
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key)) {
+        event.preventDefault();
       }
 
       // Home screen navigation
@@ -113,8 +124,8 @@ const Index = () => {
           if (layoutMode === 'grid') {
             if (focusedButton === 2 || focusedButton === 3) {
               setFocusedButton(focusedButton - 2);
-            } else if (focusedButton === -1 || focusedButton === -2) {
-              setFocusedButton(0); // Go to first app
+            } else if (focusedButton >= 0) {
+              setFocusedButton(-2); // Go to user/auth
             }
           } else { // row mode - go to top controls
             if (focusedButton >= 0) {
@@ -127,7 +138,7 @@ const Index = () => {
           if (layoutMode === 'grid') {
             if (focusedButton === 0 || focusedButton === 1) {
               setFocusedButton(focusedButton + 2);
-            } else if (focusedButton === -1 || focusedButton === -2) {
+            } else if (focusedButton < 0) {
               setFocusedButton(0); // Go to first app
             }
           } else { // row mode - go to apps
@@ -162,7 +173,7 @@ const Index = () => {
           
         case 'Escape':
         case 'Backspace':
-          // Handle double-press to exit on home screen
+          // Handle double-press to exit on home screen (already handled above)
           goBack();
           break;
       }

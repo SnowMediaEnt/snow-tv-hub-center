@@ -39,10 +39,21 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
   const { toast } = useToast();
   const { apps, loading, error } = useApps();
 
-  // TV Remote Navigation
+  // TV Remote Navigation with improved app selection
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      event.preventDefault();
+      // Handle Android back button
+      if (event.key === 'Escape' || event.key === 'Backspace' || 
+          event.keyCode === 4 || event.which === 4) {
+        event.preventDefault();
+        event.stopPropagation();
+        onBack();
+        return;
+      }
+      
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key)) {
+        event.preventDefault();
+      }
       
       switch (event.key) {
         case 'ArrowLeft':
@@ -97,11 +108,20 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
           else if (focusedElement === 'tab-1') setActiveTab('streaming');
           else if (focusedElement === 'tab-2') setActiveTab('support');
           else if (focusedElement === 'tab-3') setActiveTab('other');
-          break;
-          
-        case 'Escape':
-        case 'Backspace':
-          onBack();
+          else if (focusedElement.startsWith('app-')) {
+            // Find the focused app and show its actions
+            const currentCategoryApps = getCategoryApps(activeTab);
+            const app = currentCategoryApps.find(a => focusedElement === `app-${a.id}`);
+            if (app) {
+              setFocusedElement(`download-${app.id}`);
+            }
+          } else if (focusedElement.startsWith('download-')) {
+            // Trigger download
+            const appId = focusedElement.replace('download-', '');
+            const currentCategoryApps = getCategoryApps(activeTab);
+            const app = currentCategoryApps.find(a => a.id === appId);
+            if (app) handleDownload(app);
+          }
           break;
       }
     };
@@ -417,10 +437,11 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
       {categoryApps.map((app) => {
         const isDownloading = downloadingApps.has(app.id);
         const isDownloaded = downloadedApps.has(app.id);
-        const isInstalled = installedApps.has(app.id);
+        const isInstalled = installedApps.has(app.id) || app.is_installed;
+        const isFocused = focusedElement === `app-${app.id}` || focusedElement.startsWith(`download-${app.id}`) || focusedElement.startsWith(`install-${app.id}`) || focusedElement.startsWith(`launch-${app.id}`);
         
         return (
-          <Card key={app.id} className={`bg-gradient-to-br from-slate-700 to-slate-800 border-slate-600 overflow-hidden hover:scale-105 transition-all duration-300 ${focusedElement === `app-${app.id}` ? 'ring-2 ring-brand-ice scale-105' : ''}`}>
+          <Card key={app.id} className={`bg-gradient-to-br from-slate-700 to-slate-800 border-slate-600 overflow-hidden hover:scale-105 transition-all duration-300 ${isFocused ? 'ring-2 ring-brand-ice scale-105' : ''}`}>
             <div className="p-6">
               <div className="flex items-start gap-4 mb-4">
                 <div className="w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl flex items-center justify-center overflow-hidden">
@@ -463,7 +484,7 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
                   <Button 
                     onClick={() => handleDownload(app)}
                     disabled={isDownloading || isDownloaded || isInstalled}
-                    className={`flex-1 ${isDownloading || isDownloaded || isInstalled ? 'bg-gray-600 text-gray-400' : 'bg-brand-ice hover:bg-brand-ice/80 text-white'}`}
+                    className={`flex-1 ${focusedElement === `download-${app.id}` ? 'ring-2 ring-white' : ''} ${isDownloading || isDownloaded || isInstalled ? 'bg-gray-600 text-gray-400' : 'bg-brand-ice hover:bg-brand-ice/80 text-white'}`}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     {isDownloading ? 'Downloading...' : isDownloaded ? 'Downloaded' : 'Download'}

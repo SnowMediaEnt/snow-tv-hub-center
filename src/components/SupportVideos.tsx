@@ -17,10 +17,25 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
   const [focusedElement, setFocusedElement] = useState<'back' | 'tab-0' | 'tab-1' | 'tab-2' | string>('back');
   const [activeTab, setActiveTab] = useState<string>('device');
 
-  // TV Remote Navigation
+  // TV Remote Navigation with video controls
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      event.preventDefault();
+      // Handle Android back button
+      if (event.key === 'Escape' || event.key === 'Backspace' || 
+          event.keyCode === 4 || event.which === 4) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (selectedVideo) {
+          handleCloseVideo();
+        } else {
+          onBack();
+        }
+        return;
+      }
+      
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key)) {
+        event.preventDefault();
+      }
       
       const { deviceVideos, serviceVideos, otherVideos } = categorizeVideos();
       const currentVideos = activeTab === 'device' ? deviceVideos : 
@@ -90,12 +105,15 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
           }
           break;
           
-        case 'Escape':
-        case 'Backspace':
+        // Video playback controls when video is open
+        case 'p':
+        case 'k':
           if (selectedVideo) {
-            handleCloseVideo();
-          } else {
-            onBack();
+            // Send play/pause to iframe (basic attempt)
+            const iframe = document.querySelector('iframe');
+            if (iframe && iframe.contentWindow) {
+              iframe.contentWindow.postMessage('{"method":"pause"}', '*');
+            }
           }
           break;
       }
@@ -299,18 +317,23 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
           </Tabs>
         )}
 
-        {/* Fullscreen Video Player Dialog */}
+        {/* Fullscreen Video Player Dialog with TV Controls */}
         <Dialog open={!!selectedVideo} onOpenChange={handleCloseVideo}>
           <DialogContent className="max-w-[100vw] max-h-[100vh] w-full h-full p-0 bg-black border-0 m-0">
             <div className="relative w-full h-full">
-              <Button 
-                onClick={handleCloseVideo}
-                variant="outline"
-                size="sm"
-                className="absolute top-4 right-4 z-50 bg-black/50 border-white/20 text-white hover:bg-black/80"
-              >
-                ✕ Close
-              </Button>
+              <div className="absolute top-4 right-4 z-50 flex gap-2">
+                <div className="bg-black/80 text-white px-3 py-1 rounded text-sm">
+                  Press ESC/Back to Close | P/K to Play/Pause
+                </div>
+                <Button 
+                  onClick={handleCloseVideo}
+                  variant="outline"
+                  size="sm"
+                  className="bg-black/50 border-white/20 text-white hover:bg-black/80"
+                >
+                  ✕ Close
+                </Button>
+              </div>
               {selectedVideo && (
                 <iframe
                   src={selectedVideo}

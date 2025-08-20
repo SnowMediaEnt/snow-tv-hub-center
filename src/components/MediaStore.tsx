@@ -24,10 +24,25 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [focusedElement, setFocusedElement] = useState<'back' | 'signin' | 'cart' | string>('back');
 
-  // TV Remote Navigation
+  // TV Remote Navigation with checkout support
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      event.preventDefault();
+      // Handle Android back button
+      if (event.key === 'Escape' || event.key === 'Backspace' || 
+          event.keyCode === 4 || event.which === 4) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (selectedProduct) {
+          setSelectedProduct(null);
+        } else {
+          onBack();
+        }
+        return;
+      }
+      
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key)) {
+        event.preventDefault();
+      }
       
       const filteredProducts = getFilteredProducts();
       
@@ -86,18 +101,18 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
         case ' ':
           if (focusedElement === 'back') onBack();
           else if (focusedElement === 'signin') navigate('/auth');
+          else if (focusedElement === 'cart') handleCheckout();
           else if (focusedElement.startsWith('product-')) {
             const product = filteredProducts.find(p => focusedElement === `product-${p.id}`);
             if (product) setSelectedProduct(product);
           }
           break;
           
-        case 'Escape':
-        case 'Backspace':
-          if (selectedProduct) {
-            setSelectedProduct(null);
-          } else {
-            onBack();
+        // Add checkout shortcut
+        case 'c':
+        case 'C':
+          if (cartItems.length > 0) {
+            handleCheckout();
           }
           break;
       }
