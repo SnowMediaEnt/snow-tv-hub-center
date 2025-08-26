@@ -40,11 +40,6 @@ const Index = () => {
     // Detect screen resolution for TV optimization
     const handleResize = () => {
       setScreenHeight(window.innerHeight);
-      // Force row layout for 1080p to prevent cutoff
-      if (window.innerHeight <= 1080 && layoutMode === 'grid') {
-        setLayoutMode('row');
-        localStorage.setItem('snow-media-layout', 'row');
-      }
     };
 
     handleResize(); // Check on mount
