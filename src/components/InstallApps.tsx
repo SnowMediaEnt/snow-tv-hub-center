@@ -32,6 +32,39 @@ interface AppData {
 }
 
 const InstallApps = ({ onBack }: InstallAppsProps) => {
+  const { toast } = useToast();
+  const { apps, loading, error } = useAppData();
+
+  // Early returns MUST happen before any other hooks
+  if (loading) {
+    return (
+      <div className="min-h-screen p-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-ice mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading apps...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen p-8 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 text-lg mb-4">Error loading apps: {error}</p>
+          <Button onClick={onBack} variant="gold" className="">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Home
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return <InstallAppsContent onBack={onBack} apps={apps} />;
+};
+
+const InstallAppsContent = ({ onBack, apps }: { onBack: () => void; apps: AppData[] }) => {
   const [downloadingApps, setDownloadingApps] = useState<Set<string>>(new Set());
   const [downloadedApps, setDownloadedApps] = useState<Set<string>>(new Set());
   const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
@@ -41,7 +74,6 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
   const [activeTab, setActiveTab] = useState<string>('featured');
   const [selectedApp, setSelectedApp] = useState<AppData | null>(null);
   const { toast } = useToast();
-  const { apps, loading, error } = useAppData();
   const focusedElementRef = useRef<HTMLElement>(null);
 
   // Helper function to get category apps
@@ -316,30 +348,6 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
   };
 
 
-  if (loading) {
-    return (
-      <div className="min-h-screen p-8 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-ice mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading apps...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen p-8 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-400 text-lg mb-4">Error loading apps: {error}</p>
-          <Button onClick={onBack} variant="gold" className="">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
