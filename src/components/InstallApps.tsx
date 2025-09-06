@@ -65,6 +65,8 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
         event.preventDefault();
       }
       
+      const categoryApps = apps.filter(app => activeTab === 'featured' ? app.featured : app.category === activeTab);
+      
       switch (event.key) {
         case 'ArrowLeft':
           if (focusedElement === 'tab-1') setFocusedElement('tab-0');
@@ -78,17 +80,15 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
           else if (focusedElement === 'tab-1') setFocusedElement('tab-2');
           else if (focusedElement === 'tab-2') setFocusedElement('tab-3');
           else if (focusedElement === 'back') {
-            const currentCategoryApps = getCategoryApps(activeTab);
-            if (currentCategoryApps.length > 0) setFocusedElement(`app-${currentCategoryApps[0].id}`);
+            if (categoryApps.length > 0) setFocusedElement(`app-${categoryApps[0].id}`);
           }
           break;
           
         case 'ArrowUp':
           if (focusedElement.startsWith('app-')) {
-            const currentCategoryApps = getCategoryApps(activeTab);
-            const currentIndex = currentCategoryApps.findIndex(app => focusedElement === `app-${app.id}`);
+            const currentIndex = categoryApps.findIndex(app => focusedElement === `app-${app.id}`);
             if (currentIndex > 0) {
-              setFocusedElement(`app-${currentCategoryApps[currentIndex - 1].id}`);
+              setFocusedElement(`app-${categoryApps[currentIndex - 1].id}`);
             } else {
               setFocusedElement('tab-0');
             }
@@ -100,13 +100,11 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
         case 'ArrowDown':
           if (focusedElement === 'back') setFocusedElement('tab-0');
           else if (focusedElement.startsWith('tab-')) {
-            const currentCategoryApps = getCategoryApps(activeTab);
-            if (currentCategoryApps.length > 0) setFocusedElement(`app-${currentCategoryApps[0].id}`);
+            if (categoryApps.length > 0) setFocusedElement(`app-${categoryApps[0].id}`);
           } else if (focusedElement.startsWith('app-')) {
-            const currentCategoryApps = getCategoryApps(activeTab);
-            const currentIndex = currentCategoryApps.findIndex(app => focusedElement === `app-${app.id}`);
-            if (currentIndex + 1 < currentCategoryApps.length) {
-              setFocusedElement(`app-${currentCategoryApps[currentIndex + 1].id}`);
+            const currentIndex = categoryApps.findIndex(app => focusedElement === `app-${app.id}`);
+            if (currentIndex + 1 < categoryApps.length) {
+              setFocusedElement(`app-${categoryApps[currentIndex + 1].id}`);
             }
           }
           break;
@@ -120,16 +118,14 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
           else if (focusedElement === 'tab-3') setActiveTab('other');
           else if (focusedElement.startsWith('app-')) {
             // Find the focused app and show its actions
-            const currentCategoryApps = getCategoryApps(activeTab);
-            const app = currentCategoryApps.find(a => focusedElement === `app-${a.id}`);
+            const app = categoryApps.find(a => focusedElement === `app-${a.id}`);
             if (app) {
               setFocusedElement(`download-${app.id}`);
             }
           } else if (focusedElement.startsWith('download-')) {
             // Trigger download
             const appId = focusedElement.replace('download-', '');
-            const currentCategoryApps = getCategoryApps(activeTab);
-            const app = currentCategoryApps.find(a => a.id === appId);
+            const app = categoryApps.find(a => a.id === appId);
             if (app) handleDownload(app);
           }
           break;
@@ -138,7 +134,7 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedElement, activeTab, onBack, getCategoryApps]);
+  }, [focusedElement, activeTab, onBack, apps]);
 
   // App status management functions
   const generateAppFileName = (app: AppData) => generateFileName(app.name, app.version);
@@ -171,16 +167,7 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
     }
   }, []);
 
-  // Initialize app statuses when apps load
-  useEffect(() => {
-    if (apps.length > 0) {
-      apps.forEach(app => {
-        ensureStatus(app);
-      });
-    }
-  }, [apps, ensureStatus]);
-
-  const handleDownload = async (app: AppData) => {
+  const handleDownload = useCallback(async (app: AppData) => {
     if (!app.downloadUrl) {
       toast({
         title: "Download Error",
@@ -220,7 +207,16 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
         return updated;
       });
     }
-  };
+  }, [toast]);
+
+  // Initialize app statuses when apps load
+  useEffect(() => {
+    if (apps.length > 0) {
+      apps.forEach(app => {
+        ensureStatus(app);
+      });
+    }
+  }, [apps, ensureStatus]);
 
   const handleInstall = async (app: AppData) => {
     try {
