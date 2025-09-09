@@ -223,8 +223,6 @@ const Index = () => {
     }
   ];
 
-  // Debug: Log current view
-  console.log('Current view:', currentView);
   
   return (
     <div className="min-h-screen">

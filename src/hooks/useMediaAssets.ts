@@ -42,13 +42,9 @@ export const useMediaAssets = () => {
 
   const uploadAsset = async (file: File, assetType: MediaAsset['asset_type'], section: string, description?: string) => {
     try {
-      console.log('Starting upload process for:', file.name, 'Type:', file.type, 'Size:', file.size);
-      
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `${assetType}/${section}/${fileName}`;
-
-      console.log('Generated file path:', filePath);
 
       // Upload file to storage
       const { error: uploadError } = await supabase.storage
@@ -56,18 +52,13 @@ export const useMediaAssets = () => {
         .upload(filePath, file);
 
       if (uploadError) {
-        console.error('Storage upload error:', uploadError);
         throw uploadError;
       }
-
-      console.log('File uploaded to storage successfully');
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('media-assets')
         .getPublicUrl(filePath);
-
-      console.log('Generated public URL:', publicUrl);
 
       // Insert record into database
       const { data, error: insertError } = await supabase
@@ -85,16 +76,12 @@ export const useMediaAssets = () => {
         .single();
 
       if (insertError) {
-        console.error('Database insert error:', insertError);
         throw insertError;
       }
-
-      console.log('Database record created successfully:', data);
 
       await fetchAssets();
       return { asset: data, publicUrl };
     } catch (err) {
-      console.error('Upload asset error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to upload asset';
       setError(errorMessage);
       throw err;
