@@ -1,0 +1,2 @@
+# Placeholder to keep the assets directory in version control.
+# Capacitor will generate files like capacitor.config.json and capacitor.plugins.json here during `npx cap sync`.
