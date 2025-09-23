@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
         const versionResponse = await fetch('https://www.wixapis.com/stores/v3/provision/version', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${wixApiKey}`,
+            'Authorization': wixApiKey,
             'wix-site-id': wixSiteId,
             'Content-Type': 'application/json',
           }
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
           productsResponse = await fetch('https://www.wixapis.com/stores/v3/products/query', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${wixApiKey}`,
+              'Authorization': wixApiKey,
               'wix-site-id': wixSiteId,
               'Content-Type': 'application/json',
             },
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
           productsResponse = await fetch('https://www.wixapis.com/stores/v1/products/query', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${wixApiKey}`,
+              'Authorization': wixApiKey,
               'wix-site-id': wixSiteId,
               'Content-Type': 'application/json',
             },
@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
         const cartResponse = await fetch(`https://www.wixapis.com/ecom/v1/carts`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${wixApiKey}`,
+            'Authorization': wixApiKey,
             'wix-site-id': wixSiteId,
             'Content-Type': 'application/json',
           },
@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
         console.log('Using Account ID:', wixAccountId);
         
         const requestHeaders = {
-          'Authorization': `Bearer ${wixApiKey}`,
+          'Authorization': wixApiKey,
           'wix-site-id': wixSiteId,
           'Content-Type': 'application/json',
         };
@@ -316,7 +316,7 @@ Deno.serve(async (req) => {
 
         const detailResponse = await fetch(`https://www.wixapis.com/members/v1/members/${wixMemberId}`, {
           headers: {
-            'Authorization': `Bearer ${wixApiKey}`,
+            'Authorization': wixApiKey,
             'wix-site-id': wixSiteId,
             'Content-Type': 'application/json',
           }
@@ -361,7 +361,7 @@ Deno.serve(async (req) => {
           const test1Response = await fetch(`https://www.wixapis.com/members/v1/members/query`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${wixApiKey}`,
+              'Authorization': wixApiKey,
               'wix-site-id': wixSiteId,
               'Content-Type': 'application/json',
             },
@@ -403,7 +403,7 @@ Deno.serve(async (req) => {
             const test2Response = await fetch(`https://www.wixapis.com/members/v1/members/query`, {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${wixApiKey}`,
+                'Authorization': wixApiKey,
                 'wix-account-id': wixAccountId,
                 'Content-Type': 'application/json',
               },
@@ -446,7 +446,7 @@ Deno.serve(async (req) => {
             const test3Response = await fetch(`https://www.wixapis.com/members/v1/members/query`, {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${wixApiKey}`,
+                 'Authorization': wixApiKey,
                 'wix-site-id': wixSiteId,
                 'wix-account-id': wixAccountId,
                 'Content-Type': 'application/json',
@@ -508,7 +508,7 @@ Deno.serve(async (req) => {
         const createMemberResponse = await fetch(`https://www.wixapis.com/members/v1/members`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${wixApiKey}`,
+            'Authorization': wixApiKey,
             'wix-site-id': wixSiteId,
             'Content-Type': 'application/json',
           },
@@ -556,7 +556,7 @@ Deno.serve(async (req) => {
         // Get member profile
         const profileResponse = await fetch(`https://www.wixapis.com/members/v1/members/${wixMemberId}`, {
           headers: {
-            'Authorization': `Bearer ${wixApiKey}`,
+             'Authorization': wixApiKey,
             'wix-site-id': wixSiteId,
             'Content-Type': 'application/json',
           }
@@ -574,7 +574,7 @@ Deno.serve(async (req) => {
           const ordersResponse = await fetch(`https://www.wixapis.com/stores/v2/orders/query`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${wixApiKey}`,
+               'Authorization': wixApiKey,
               'wix-site-id': wixSiteId,
               'Content-Type': 'application/json',
             },
@@ -654,8 +654,8 @@ Deno.serve(async (req) => {
           const contactResponse = await fetch(`https://www.wixapis.com/contacts/v4/contacts`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${wixApiKey}`,
-              'wix-site-id': wixSiteId,
+             'Authorization': wixApiKey,
+              'wix-account-id': wixAccountId,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -711,8 +711,8 @@ Deno.serve(async (req) => {
         const messageResponse = await fetch(`https://www.wixapis.com/contacts/v4/contacts`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${wixApiKey}`,
-            'wix-site-id': wixSiteId,
+            'Authorization': wixApiKey,
+             'wix-account-id': wixAccountId,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
