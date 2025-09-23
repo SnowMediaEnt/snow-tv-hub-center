@@ -44,9 +44,9 @@ const QRCodeLogin = ({ onSuccess }: QRCodeLoginProps) => {
         throw new Error(`Database error: ${sessionError.message}`);
       }
 
-      // Create the login URL with the token
-      const baseUrl = window.location.origin;
-      const loginUrl = `${baseUrl}/qr-login?token=${token}`;
+      // Create the Wix login URL instead of our own login page
+      const wixSiteUrl = 'https://www.snowmediaent.com'; // Your Wix website URL
+      const loginUrl = `${wixSiteUrl}/login?token=${token}&redirect=${encodeURIComponent(window.location.origin)}`;
       
       // Generate QR code with better error handling
       const qrDataUrl = await QRCode.toDataURL(loginUrl, {
@@ -65,8 +65,8 @@ const QRCodeLogin = ({ onSuccess }: QRCodeLoginProps) => {
       startPolling(token);
       
       toast({
-        title: "QR Code Generated",
-        description: "Scan with your phone to log in",
+        title: "✅ QR Code Generated",
+        description: "Scan to sign in with your Snow Media Ent account",
       });
       
     } catch (error) {
@@ -139,7 +139,7 @@ const QRCodeLogin = ({ onSuccess }: QRCodeLoginProps) => {
         <QrCode className="w-8 h-8 mx-auto mb-2 text-blue-400" />
         <h3 className="text-lg font-semibold text-white mb-2">QR Code Login</h3>
         <p className="text-sm text-blue-200">
-          Scan with your phone to sign in instantly
+          Scan to sign in with your existing Snow Media Ent account
         </p>
       </div>
 
@@ -189,7 +189,7 @@ const QRCodeLogin = ({ onSuccess }: QRCodeLoginProps) => {
 
       <div className="text-center">
         <p className="text-xs text-white/60">
-          Make sure you're signed in on your phone first
+          QR code will redirect to snowmediaent.com for secure login
         </p>
       </div>
     </div>

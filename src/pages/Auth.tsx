@@ -6,22 +6,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, User, Mail, Lock, UserPlus, Eye, EyeOff, QrCode } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useWixAuth } from '@/hooks/useWixAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import QRCodeLogin from '@/components/QRCodeLogin';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, user } = useAuth();
+  const { signInWithWix, signUpWithWix, user } = useWixAuth();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ 
     email: '', 
@@ -38,7 +36,7 @@ const Auth = () => {
   }, [user, navigate]);
 
   // TV remote navigation with focus handling
-  const [focusedElement, setFocusedElement] = useState<'back' | 'tab-login' | 'tab-signup' | 'tab-qr' | 'email' | 'password' | 'submit' | 'name' | 'confirm' | 'forgot'>('back');
+  const [focusedElement, setFocusedElement] = useState<'back' | 'tab-login' | 'tab-signup' | 'tab-qr' | 'email' | 'password' | 'submit' | 'name' | 'confirm'>('back');
   const [activeTab, setActiveTab] = useState('login');
 
   useEffect(() => {
@@ -71,7 +69,6 @@ const Auth = () => {
           if (focusedElement === 'email') setFocusedElement('tab-login');
           else if (focusedElement === 'password') setFocusedElement('email');
           else if (focusedElement === 'submit') setFocusedElement('password');
-          else if (focusedElement === 'forgot') setFocusedElement('submit');
           else if (focusedElement === 'name') setFocusedElement('tab-signup');
           else if (focusedElement === 'confirm') setFocusedElement('name');
           break;
@@ -83,7 +80,6 @@ const Auth = () => {
             else if (activeTab === 'signup') setFocusedElement('name');
           } else if (focusedElement === 'email') setFocusedElement('password');
           else if (focusedElement === 'password') setFocusedElement('submit');
-          else if (focusedElement === 'submit') setFocusedElement('forgot');
           else if (focusedElement === 'name') setFocusedElement('email');
           break;
           
@@ -113,8 +109,6 @@ const Auth = () => {
               const signupForm = document.querySelectorAll('form')[1] as HTMLFormElement;
               if (signupForm) signupForm.requestSubmit();
             }
-          } else if (focusedElement === 'forgot') {
-            handleForgotPassword();
           }
           break;
       }
@@ -129,7 +123,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await signIn(loginForm.email, loginForm.password);
+      const { error } = await signInWithWix(loginForm.email, loginForm.password);
       
       if (error) {
         toast({
@@ -179,7 +173,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await signUp(
+      const { error } = await signUpWithWix(
         signupForm.email, 
         signupForm.password, 
         signupForm.fullName
@@ -202,8 +196,9 @@ const Auth = () => {
       } else {
         toast({
           title: "Account created!",
-          description: "Please check your email to verify your account.",
+          description: "Welcome to Snow Media Ent! Your Wix account has been created.",
         });
+        navigate('/');
       }
     } catch (error) {
       toast({
@@ -216,43 +211,12 @@ const Auth = () => {
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!loginForm.email) {
-      toast({
-        title: "Email required",
-        description: "Please enter your email address first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setResetLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(loginForm.email, {
-        redirectTo: `${window.location.origin}/auth`,
-      });
-
-      if (error) {
-        toast({
-          title: "Reset failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Reset email sent",
-          description: "Check your email for the password reset link.",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Reset failed",
-        description: "An unexpected error occurred.",
-        variant: "destructive",
-      });
-    } finally {
-      setResetLoading(false);
-    }
+  const handleQRSuccess = () => {
+    toast({
+      title: "Welcome back!",
+      description: "Successfully logged in via QR code.",
+    });
+    navigate('/');
   };
 
   return (
@@ -369,16 +333,6 @@ const Auth = () => {
                   {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
 
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  disabled={resetLoading}
-                  className={`w-full text-sm text-blue-300 hover:text-blue-200 mt-2 underline transition-all duration-200 ${
-                    focusedElement === 'forgot' ? 'ring-4 ring-blue-400/60 scale-105 bg-blue-600/20 rounded p-2' : ''
-                  }`}
-                >
-                  {resetLoading ? 'Sending...' : 'Forgot Password?'}
-                </button>
               </form>
             </TabsContent>
 

@@ -37,9 +37,9 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
         event.preventDefault();
       }
       
-      const { deviceVideos, serviceVideos, otherVideos } = categorizeVideos();
+      const { deviceVideos, serviceVideos, allVideos } = categorizeVideos();
       const currentVideos = activeTab === 'device' ? deviceVideos : 
-                           activeTab === 'service' ? serviceVideos : otherVideos;
+                           activeTab === 'service' ? serviceVideos : allVideos;
       
       switch (event.key) {
         case 'ArrowLeft':
@@ -98,7 +98,7 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
           if (focusedElement === 'back') onBack();
           else if (focusedElement === 'tab-0') setActiveTab('device');
           else if (focusedElement === 'tab-1') setActiveTab('service');
-          else if (focusedElement === 'tab-2') setActiveTab('other');
+          else if (focusedElement === 'tab-2') setActiveTab('all');
           else if (focusedElement.startsWith('video-')) {
             const video = currentVideos.find(v => focusedElement === `video-${v.id}`);
             if (video) handleVideoClick(video.embed_url);
@@ -147,16 +147,13 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
     const serviceVideos = videos.filter(video => 
       video.tags.some(tag => serviceTags.includes(tag.toLowerCase()))
     );
-    const otherVideos = videos.filter(video => 
-      !video.tags.some(tag => 
-        [...deviceTags, ...serviceTags].includes(tag.toLowerCase())
-      )
-    );
+    // All videos - don't filter anything
+    const allVideos = videos;
     
-    return { deviceVideos, serviceVideos, otherVideos };
+    return { deviceVideos, serviceVideos, allVideos };
   };
 
-  const { deviceVideos, serviceVideos, otherVideos } = categorizeVideos();
+  const { deviceVideos, serviceVideos, allVideos } = categorizeVideos();
 
   const renderVideoGrid = (videoList: typeof videos) => (
     <div className="grid grid-cols-2 gap-6">
@@ -278,10 +275,10 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
                 Service ({serviceVideos.length})
               </TabsTrigger>
               <TabsTrigger 
-                value="other" 
+                value="all" 
                 className={`text-white data-[state=active]:bg-brand-gold text-center ${focusedElement === 'tab-2' ? 'ring-2 ring-brand-ice' : ''}`}
               >
-                Other ({otherVideos.length})
+                All ({allVideos.length})
               </TabsTrigger>
             </TabsList>
             
@@ -305,13 +302,13 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
               )}
             </TabsContent>
             
-            <TabsContent value="other" className="mt-0">
-              {otherVideos.length === 0 ? (
+            <TabsContent value="all" className="mt-0">
+              {allVideos.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-xl text-slate-400">No uncategorized videos found.</p>
+                  <p className="text-xl text-slate-400">No videos found in your Vimeo account.</p>
                 </div>
               ) : (
-                renderVideoGrid(otherVideos)
+                renderVideoGrid(allVideos)
               )}
             </TabsContent>
           </Tabs>

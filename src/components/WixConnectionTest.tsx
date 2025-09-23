@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, Loader2, ShoppingCart } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, ShoppingCart, ArrowLeft } from 'lucide-react';
 import { useWixIntegration } from '@/hooks/useWixIntegration';
 import { useWixStore } from '@/hooks/useWixStore';
 import { useToast } from '@/hooks/use-toast';
 
-const WixConnectionTest = () => {
+const WixConnectionTest = ({ onBack }: { onBack?: () => void }) => {
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [connectionResult, setConnectionResult] = useState<any>(null);
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
@@ -102,6 +102,12 @@ const WixConnectionTest = () => {
 
   return (
     <div className="space-y-6 p-6">
+      {onBack && (
+        <Button onClick={onBack} variant="outline" className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+      )}
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">Wix Store Connection Test</h2>
         <p className="text-muted-foreground">Test your Wix integration and checkout functionality</p>
