@@ -43,8 +43,8 @@ Deno.serve(async (req) => {
     // Test if the function is even being reached
     console.log('Environment check passed');
     
-    if (!wixApiKey || !wixAccountId || !wixSiteId) {
-      console.error('Missing WIX_API_KEY, WIX_ACCOUNT_ID, or WIX_SITE_ID');
+    if (!wixApiKey || !wixAccountId) {
+      console.error('Missing WIX_API_KEY or WIX_ACCOUNT_ID');
       return new Response(
         JSON.stringify({ 
           error: 'Wix API credentials not configured',
@@ -70,6 +70,16 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'get-products':
+        if (!wixSiteId) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Site ID required for products API',
+              details: 'WIX_SITE_ID is required for site-level operations like fetching products. Please provide your actual Site ID, not Account ID.'
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
         // First check catalog version
         const versionResponse = await fetch('https://www.wixapis.com/stores/v3/provision/version', {
           method: 'GET',
@@ -161,6 +171,16 @@ Deno.serve(async (req) => {
         );
 
       case 'create-cart':
+        if (!wixSiteId) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Site ID required for cart creation',
+              details: 'WIX_SITE_ID is required for eCommerce operations. Please provide your actual Site ID, not Account ID.'
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
         // Create a cart in Wix using eCommerce API
         console.log('=== CREATE CART DEBUG ===');
         console.log('Items to add to cart:', JSON.stringify(items, null, 2));
