@@ -238,19 +238,19 @@ export const useAppData = () => {
       // Generate package name from app name
       const cleanName = (app.name || 'unknown').toLowerCase().replace(/[^a-z0-9]/g, '');
       
-      return {
-        id: app.id || app.packageName || cleanName || 'unknown',
-        name: app.name || 'Unknown App',
-        version: app.version || '1.0',
-        size: app.size || '25MB',
-        description: app.description || 'No description available',
-        icon: app.icon || 'https://snowmediaapps.com/apps/icons/default.png',
-        apk: downloadUrl,
-        downloadUrl,
-        packageName: app.packageName || `com.${cleanName}.app`,
-        featured: app.featured || false,
-        category: (app.category as 'streaming' | 'support') || 'streaming'
-      };
+        return {
+          id: app.id || app.packageName || cleanName || 'unknown',
+          name: app.name || 'Unknown App',
+          version: app.version || '1.0',
+          size: app.size || '25MB',
+          description: app.description || 'No description available',
+          icon: app.icon || 'https://snowmediaapps.com/apps/icons/default.png',
+          apk: downloadUrl,
+          downloadUrl,
+          packageName: app.packageName || `com.${cleanName}.app`,
+          featured: app.featured || false,
+          category: (app.support === true ? 'support' : 'streaming') as 'streaming' | 'support'
+        };
     });
     
     console.log('Transformed remote apps:', transformedApps);
