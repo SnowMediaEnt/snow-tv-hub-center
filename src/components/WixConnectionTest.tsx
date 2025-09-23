@@ -56,22 +56,32 @@ const WixConnectionTest = ({ onBack }: { onBack?: () => void }) => {
     setCheckoutResult(null);
     
     try {
+      console.log('Current products:', products);
+      console.log('Products length:', products.length);
+      
       // Use first available product for test
       if (products.length === 0) {
+        console.log('No products available, fetching...');
         await fetchProducts();
-        return;
+        
+        // Check again after fetching
+        if (products.length === 0) {
+          throw new Error('No products available for checkout test. Please ensure your Wix store has products.');
+        }
       }
       
       const testProduct = products[0];
+      console.log('Using test product:', testProduct);
+      
       const testItems = [{
         productId: testProduct.id,
         quantity: 1,
         name: testProduct.name,
         price: testProduct.price,
-        image: testProduct.images[0]
+        image: testProduct.images?.[0] || ''
       }];
       
-      console.log('Testing checkout with:', testItems);
+      console.log('Testing checkout with items:', testItems);
       const result = await createCart(testItems);
       console.log('Checkout test result:', result);
       
