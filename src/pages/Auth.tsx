@@ -6,14 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, User, Mail, Lock, UserPlus, Eye, EyeOff, QrCode } from 'lucide-react';
-import { useWixAuth } from '@/hooks/useWixAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import QRCodeLogin from '@/components/QRCodeLogin';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signInWithWix, signUpWithWix, user } = useWixAuth();
+  const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
@@ -123,7 +123,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await signInWithWix(loginForm.email, loginForm.password);
+      const { error } = await signIn(loginForm.email, loginForm.password);
       
       if (error) {
         toast({
@@ -173,7 +173,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await signUpWithWix(
+      const { error } = await signUp(
         signupForm.email, 
         signupForm.password, 
         signupForm.fullName
@@ -196,9 +196,8 @@ const Auth = () => {
       } else {
         toast({
           title: "Account created!",
-          description: "Welcome to Snow Media Ent! Your Wix account has been created.",
+          description: "Welcome to Snow Media Ent! Please check your email to verify your account.",
         });
-        navigate('/');
       }
     } catch (error) {
       toast({

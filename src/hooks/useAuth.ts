@@ -10,9 +10,12 @@ export const useAuth = () => {
   const { verifyWixMember, createMember, addToEmailList } = useWixIntegration();
 
   useEffect(() => {
+    console.log('🔧 Auth hook: Setting up auth state listener...');
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('🔄 Auth state change:', event, session ? 'Session exists' : 'No session');
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -20,7 +23,9 @@ export const useAuth = () => {
     );
 
     // Check for existing session
+    console.log('🔍 Auth hook: Checking for existing session...');
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('📋 Existing session found:', session ? 'Yes' : 'No');
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -105,28 +110,64 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('🔐 Starting sign in process for:', email);
+      
       // Verify Wix member exists before allowing login
       const wixVerification = await verifyWixMember(email);
+      console.log('📋 Wix verification result:', wixVerification);
       
       if (!wixVerification.exists) {
-        return { error: { message: 'Email not found in Wix member database. Please contact support@snowmediaent.com.' } };
+        console.log('❌ No Wix member found for:', email);
+        return { error: { message: 'Email not found in Snow Media Ent member database. Please sign up first or contact support.' } };
       }
 
+      console.log('✅ Wix member verified, attempting Supabase login...');
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
+      if (error) {
+        console.log('❌ Supabase login failed:', error.message);
+        // If Supabase login fails, try to create the account first
+        if (error.message.includes('Invalid login credentials')) {
+          console.log('🔧 Attempting to create Supabase account for existing Wix member...');
+          const signUpResult = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/`,
+              data: {
+                full_name: wixVerification.member?.name || '',
+                wix_member_id: wixVerification.member?.id
+              }
+            }
+          });
+          
+          if (signUpResult.error) {
+            console.log('❌ Account creation failed:', signUpResult.error.message);
+            return { error: signUpResult.error };
+          }
+          
+          console.log('✅ Account created, now signing in...');
+          return { error: null };
+        }
+        return { error };
+      }
+
       // Update profile with Wix account ID if login successful
-      if (!error) {
+      console.log('✅ Supabase login successful, updating profile...');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
         await supabase.from('profiles').update({
           wix_account_id: wixVerification.member?.id
-        }).eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+        }).eq('user_id', user.id);
+        console.log('✅ Profile updated with Wix account ID');
       }
 
       return { error };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('💥 Login error:', error);
       return { error: { message: 'Failed to login. Please try again.' } };
     }
   };

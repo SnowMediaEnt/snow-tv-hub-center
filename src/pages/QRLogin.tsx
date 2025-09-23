@@ -27,22 +27,31 @@ const QRLogin = () => {
 
   const handleQRLogin = async () => {
     try {
+      console.log('🔗 QR Login: Starting authentication process for token:', token);
+      
       // Check if user is already authenticated
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔐 Current session:', session ? 'Found' : 'None');
       
       if (!session) {
-        // Redirect to login with return URL
+        console.log('❌ No session found, redirecting to auth...');
+        // Redirect to login with return URL - user needs to sign in first
         const returnUrl = encodeURIComponent(`/qr-login?token=${token}`);
-        window.location.href = `/auth?redirect=${returnUrl}`;
+        navigate(`/auth?redirect=${returnUrl}`);
         return;
       }
 
+      console.log('✅ Session found, checking QR token validity...');
+      
       // Check if token exists and is valid
       const { data: tokenData, error: tokenError } = await supabase
         .from('qr_login_sessions')
         .select('*')
         .eq('token', token)
         .maybeSingle();
+
+      console.log('🎫 Token data:', tokenData);
+      console.log('❗ Token error:', tokenError);
 
       if (tokenError) {
         console.error('Token query error:', tokenError);
