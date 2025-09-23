@@ -11,6 +11,7 @@ import SupportVideos from '@/components/SupportVideos';
 import ChatCommunity from '@/components/ChatCommunity';
 import Settings from '@/components/Settings';
 import UserDashboard from '@/components/UserDashboard';
+import WixConnectionTest from '@/components/WixConnectionTest';
 import { useAuth } from '@/hooks/useAuth';
 import { useVersion } from '@/hooks/useVersion';
 import { useNavigate } from 'react-router-dom';
@@ -235,6 +236,7 @@ const Index = () => {
       {currentView === 'credits' && <CreditStore onBack={() => goBack()} />}
       {currentView === 'settings' && <Settings onBack={() => goBack()} layoutMode={layoutMode} onLayoutChange={handleLayoutChange} />}
       {currentView === 'user' && <UserDashboard onViewChange={(view) => navigateTo(view)} onManageMedia={() => navigateTo('media')} onViewSettings={() => navigateTo('settings')} onCommunityChat={() => navigateTo('community')} onCreditStore={() => navigateTo('credits')} />}
+      {currentView === 'wix-test' && <WixConnectionTest />}
 
       {/* Home screen content */}
       {currentView === 'home' && (
@@ -320,6 +322,15 @@ const Index = () => {
                 'w-4 h-4'
               }`} />
               Settings
+            </Button>
+            <Button
+              onClick={() => navigateTo('wix-test')}
+              variant="outline"
+              size="sm"
+              className="ml-2"
+            >
+              <Store className="mr-2 w-4 h-4" />
+              Test Wix
             </Button>
           </div>
 
