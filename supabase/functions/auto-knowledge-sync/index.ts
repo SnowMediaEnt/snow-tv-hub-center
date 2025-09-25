@@ -71,7 +71,7 @@ serve(async (req) => {
         results.push({ 
           source: source.name, 
           success: false, 
-          error: error.message 
+          error: error instanceof Error ? error.message : String(error)
         })
       }
     }
@@ -88,7 +88,7 @@ serve(async (req) => {
     console.error('Sync error:', error)
     return new Response(JSON.stringify({ 
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -130,7 +130,7 @@ async function syncFromGitHub(source: any, supabase: any) {
 
     return { success: true, synced, errors }
   } catch (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: error instanceof Error ? error.message : String(error) }
   }
 }
 
@@ -173,7 +173,7 @@ async function syncFromGoogleDrive(source: any, supabase: any) {
 
     return { success: true, synced, errors }
   } catch (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: error instanceof Error ? error.message : String(error) }
   }
 }
 
@@ -207,7 +207,7 @@ async function syncFromAPI(source: any, supabase: any) {
 
     return { success: true, synced, errors }
   } catch (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: error instanceof Error ? error.message : String(error) }
   }
 }
 

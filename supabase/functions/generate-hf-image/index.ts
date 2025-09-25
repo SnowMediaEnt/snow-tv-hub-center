@@ -50,7 +50,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in generate-hf-image function:', error)
     return new Response(
-      JSON.stringify({ error: 'Failed to generate image', details: error.message }),
+      JSON.stringify({ error: 'Failed to generate image', details: error instanceof Error ? error.message : String(error) }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }

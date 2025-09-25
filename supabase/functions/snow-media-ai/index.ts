@@ -227,7 +227,7 @@ Be friendly, knowledgeable, and always ready to help with both snow media questi
   } catch (error) {
     console.error('Error in snow-media-ai function:', error);
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       message: "I'm having trouble right now. Please try again in a moment."
     }), {
       status: 500,
