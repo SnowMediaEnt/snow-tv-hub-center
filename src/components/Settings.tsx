@@ -115,9 +115,6 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
     }
   }, [activeTab]);
 
-  if (activeTab === 'media') {
-    return <MediaManager onBack={() => setActiveTab('layout')} />;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-8" style={{ height: '100vh', maxHeight: '100vh', overflowY: 'auto' }}>
@@ -228,6 +225,7 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
 
           <TabsContent value="media" className="mt-6">
             <Card className="bg-gradient-to-br from-purple-600 to-purple-800 border-purple-500 p-6">
+              <h2 className="text-2xl font-bold text-white mb-6">Media Manager</h2>
               <MediaManager onBack={() => setActiveTab('layout')} />
             </Card>
           </TabsContent>
