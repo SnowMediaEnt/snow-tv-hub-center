@@ -44,11 +44,11 @@ const QRCodeLogin = ({ onSuccess }: QRCodeLoginProps) => {
         throw new Error(`Database error: ${sessionError.message}`);
       }
 
-      // Create direct app login URL - use deployed domain if available, otherwise current origin
-      const appDomain = 'https://your-deployed-app.com'; // Replace with your actual deployed domain
-      const loginUrl = `${window.location.origin}/qr-login?token=${token}`;
+      // Create deep link URL that opens the mobile app directly
+      const appScheme = 'app.lovable.f44324110df840aea0a1fb97cafa76e7';
+      const loginUrl = `${appScheme}://qr-login?token=${token}`;
       
-      console.log('Generated QR login URL:', loginUrl);
+      console.log('Generated QR deep link:', loginUrl);
 
       // Generate QR code with better error handling
       const qrDataUrl = await QRCode.toDataURL(loginUrl, {
