@@ -157,6 +157,7 @@ Deno.serve(async (req) => {
         console.log('=== CREATE CART DEBUG ===');
         console.log('Items to add to cart:', JSON.stringify(items, null, 2));
         console.log('Account ID being used:', wixAccountId);
+        console.log('Site ID being used:', wixSiteId);
         
         if (!items || !Array.isArray(items) || items.length === 0) {
           console.error('Invalid or missing items for cart creation');
@@ -166,13 +167,20 @@ Deno.serve(async (req) => {
           );
         }
         
+        const cartHeaders: Record<string, string> = {
+          'Authorization': wixApiKey,
+          'wix-account-id': wixAccountId,
+          'Content-Type': 'application/json',
+        };
+        
+        // Add site ID if available (may be required for some Wix configurations)
+        if (wixSiteId) {
+          cartHeaders['wix-site-id'] = wixSiteId;
+        }
+        
         const cartResponse = await fetch(`https://www.wixapis.com/ecom/v1/carts`, {
           method: 'POST',
-          headers: {
-            'Authorization': wixApiKey,
-            'wix-account-id': wixAccountId,
-            'Content-Type': 'application/json',
-          },
+          headers: cartHeaders,
           body: JSON.stringify({
             lineItems: items.map((item: any) => ({
               catalogReference: {
@@ -185,13 +193,33 @@ Deno.serve(async (req) => {
         });
 
         console.log('Cart API response status:', cartResponse.status);
+        const responseText = await cartResponse.text();
+        console.log('Cart API full response:', responseText);
+        
         if (!cartResponse.ok) {
-          const errorText = await cartResponse.text();
-          console.error('Cart API error:', errorText);
-          throw new Error(`Wix Cart API error: ${cartResponse.status} ${cartResponse.statusText} - ${errorText}`);
+          console.error('Cart API error - Status:', cartResponse.status);
+          console.error('Cart API error - Response:', responseText);
+          
+          // Return detailed error from Wix
+          return new Response(
+            JSON.stringify({ 
+              error: `Wix Cart API error: ${cartResponse.status} ${cartResponse.statusText}`,
+              details: responseText,
+              wixErrorDetails: responseText ? JSON.parse(responseText) : null,
+              requestInfo: {
+                hasAccountId: !!wixAccountId,
+                hasSiteId: !!wixSiteId,
+                itemCount: items.length
+              }
+            }),
+            { 
+              status: cartResponse.status, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
         }
 
-        const cartData = await cartResponse.json();
+        const cartData = JSON.parse(responseText);
         
         return new Response(
           JSON.stringify({ 
