@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import QRCodeLogin from '@/components/QRCodeLogin';
-
+import { supabase } from '@/integrations/supabase/client';
 const Auth = () => {
   const navigate = useNavigate();
   const { signIn, signUp, user } = useAuth();
@@ -132,11 +132,20 @@ const Auth = () => {
           variant: "destructive",
         });
       } else {
-        toast({
-          title: "Welcome back!",
-          description: "Successfully logged in.",
-        });
-        navigate('/');
+        // Double-check there's an active session before navigating
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          toast({
+            title: "Welcome back!",
+            description: "Successfully logged in.",
+          });
+          navigate('/');
+        } else {
+          toast({
+            title: "Check your email",
+            description: "We created your account. Please confirm your email before signing in.",
+          });
+        }
       }
     } catch (error) {
       toast({
