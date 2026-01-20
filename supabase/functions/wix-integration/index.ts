@@ -215,26 +215,30 @@ Deno.serve(async (req) => {
         const checkoutData = JSON.parse(checkoutText);
         const checkoutId = checkoutData.checkout?.id;
         
-        // Get the checkout URL for redirect
+        // Get the checkout URL for redirect using GET request
         let checkoutUrl = null;
         if (checkoutId) {
           console.log('Checkout created with ID:', checkoutId);
           
-          const redirectResponse = await fetch(`https://www.wixapis.com/ecom/v1/checkouts/${checkoutId}/getCheckoutUrl`, {
-            method: 'POST',
-            headers: checkoutHeaders,
-            body: JSON.stringify({})
+          // Use GET request to the correct endpoint format
+          const redirectResponse = await fetch(`https://www.wixapis.com/ecom/v1/checkouts/${checkoutId}/checkout-url`, {
+            method: 'GET',
+            headers: {
+              'Authorization': wixApiKey,
+              'wix-site-id': wixSiteId,
+            }
           });
           
           console.log('Redirect URL response status:', redirectResponse.status);
+          const redirectText = await redirectResponse.text();
+          console.log('Redirect URL response body:', redirectText);
           
           if (redirectResponse.ok) {
-            const redirectData = await redirectResponse.json();
+            const redirectData = JSON.parse(redirectText);
             checkoutUrl = redirectData.checkoutUrl;
             console.log('Checkout URL:', checkoutUrl);
           } else {
-            const redirectError = await redirectResponse.text();
-            console.error('Failed to get checkout URL:', redirectError);
+            console.error('Failed to get checkout URL:', redirectText);
           }
         }
         
