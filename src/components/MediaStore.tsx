@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
 interface MediaStoreProps {
   onBack: () => void;
 }
@@ -175,16 +176,27 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
       
       if (checkoutUrl) {
         clearCart();
-        toast({
-          title: "Opening Checkout",
-          description: "Use the close button (X) to return to the store",
-        });
-        // Open in-app browser with close button for better TV experience
-        await Browser.open({ 
-          url: checkoutUrl,
-          presentationStyle: 'fullscreen',
-          toolbarColor: '#000000'
-        });
+        
+        // Check if running on native platform (Android/iOS)
+        if (Capacitor.isNativePlatform()) {
+          toast({
+            title: "Opening Checkout",
+            description: "Use the close button (X) to return to the store",
+          });
+          // Open in-app browser with close button for better TV experience
+          await Browser.open({ 
+            url: checkoutUrl,
+            presentationStyle: 'fullscreen',
+            toolbarColor: '#000000'
+          });
+        } else {
+          // Web fallback - open in new tab
+          toast({
+            title: "Opening Checkout",
+            description: "Checkout opened in a new tab. Close it to return here.",
+          });
+          window.open(checkoutUrl, '_blank');
+        }
       }
     } catch (error) {
       console.error('Checkout error:', error);
