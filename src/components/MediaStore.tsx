@@ -8,7 +8,7 @@ import { useCart } from '@/hooks/useCart';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-
+import { Browser } from '@capacitor/browser';
 interface MediaStoreProps {
   onBack: () => void;
 }
@@ -176,11 +176,15 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
       if (checkoutUrl) {
         clearCart();
         toast({
-          title: "Redirecting to Checkout",
-          description: "Taking you to secure Wix checkout...",
+          title: "Opening Checkout",
+          description: "Use the close button (X) to return to the store",
         });
-        // Navigate in same window for a smoother experience
-        window.location.href = checkoutUrl;
+        // Open in-app browser with close button for better TV experience
+        await Browser.open({ 
+          url: checkoutUrl,
+          presentationStyle: 'fullscreen',
+          toolbarColor: '#000000'
+        });
       }
     } catch (error) {
       console.error('Checkout error:', error);
