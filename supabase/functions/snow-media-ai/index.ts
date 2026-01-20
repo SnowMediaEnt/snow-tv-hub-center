@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,7 +14,39 @@ serve(async (req) => {
   }
 
   try {
-    const { message, userId } = await req.json();
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', message: 'Please sign in to use the AI assistant.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    
+    // Create client with user's auth token
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Verify the JWT and get user
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      console.error('Auth error:', claimsError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', message: 'Invalid or expired session. Please sign in again.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log('Authenticated user:', userId);
+
+    const { message } = await req.json();
 
     if (!message) {
       throw new Error('Message is required');
@@ -24,16 +57,13 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    // Fetch active knowledge documents for context
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.7.1');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    const supabase = createClient(supabaseUrl!, supabaseKey!);
+    // Use service role for fetching knowledge documents
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
     let knowledgeContext = '';
     try {
-      const { data: docs, error } = await supabase
+      const { data: docs, error } = await supabaseAdmin
         .from('knowledge_documents')
         .select('title, description, content_preview, category')
         .eq('is_active', true)
@@ -204,7 +234,7 @@ Be friendly, knowledgeable, and always ready to help with both snow media questi
     }
 
     const data = await response.json();
-    console.log('AI Response:', data);
+    console.log('AI Response for user', userId, ':', data.usage);
 
     const aiMessage = data.choices[0].message;
     let functionCall = null;
