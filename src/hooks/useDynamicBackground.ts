@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useDynamicBackground = (section: string = 'home') => {
   const [currentBackground, setCurrentBackground] = useState<string | null>(null);
   const [rotationIndex, setRotationIndex] = useState(0);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const getAssetUrl = useCallback((filePath: string) => {
     const { data: { publicUrl } } = supabase.storage
@@ -38,6 +39,7 @@ export const useDynamicBackground = (section: string = 'home') => {
     }
   }, [section, rotationIndex, getAssetUrl]);
 
+  // Main effect for fetching and subscribing
   useEffect(() => {
     fetchAndUpdateBackground();
 
@@ -50,7 +52,7 @@ export const useDynamicBackground = (section: string = 'home') => {
     window.addEventListener('backgroundRefresh', handleBackgroundRefresh);
 
     // Set up realtime subscription for instant updates
-    const channel = supabase
+    channelRef.current = supabase
       .channel('media_assets_changes')
       .on(
         'postgres_changes',
@@ -60,26 +62,32 @@ export const useDynamicBackground = (section: string = 'home') => {
           table: 'media_assets',
           filter: `asset_type=eq.background`
         },
-        (payload) => {
-          console.log('Media asset changed:', payload);
+        () => {
+          console.log('Media asset changed');
           fetchAndUpdateBackground();
         }
       )
       .subscribe();
 
+    // Cleanup function
     return () => {
       window.removeEventListener('backgroundRefresh', handleBackgroundRefresh);
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [fetchAndUpdateBackground]);
 
-  // Set up rotation interval for multiple backgrounds
+  // Separate effect for rotation interval
   useEffect(() => {
     const rotationInterval = setInterval(() => {
       setRotationIndex(prev => prev + 1);
     }, 30000); // Change every 30 seconds
 
-    return () => clearInterval(rotationInterval);
+    return () => {
+      clearInterval(rotationInterval);
+    };
   }, []);
 
   return {
