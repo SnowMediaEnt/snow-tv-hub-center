@@ -50,68 +50,52 @@ const CommunityChat = ({ onBack }: CommunityChatProps) => {
 
   const getCurrentFocusId = () => focusableIds[focusedIndex];
 
-  // Spatial navigation using element positions
-  const findNearestInDirection = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
-    if (!containerRef.current) return focusedIndex;
-
-    const elements = containerRef.current.querySelectorAll('[data-focus-id]');
-    const currentEl = containerRef.current.querySelector(`[data-focus-id="${getCurrentFocusId()}"]`);
-    if (!currentEl) return 0;
-
-    const currentRect = currentEl.getBoundingClientRect();
-    const currentCenterX = currentRect.left + currentRect.width / 2;
-    const currentCenterY = currentRect.top + currentRect.height / 2;
-
-    let bestIndex = focusedIndex;
-    let bestScore = Infinity;
-
-    elements.forEach((el) => {
-      const id = el.getAttribute('data-focus-id');
-      const idx = focusableIds.indexOf(id || '');
-      if (idx === -1 || idx === focusedIndex) return;
-
-      const rect = el.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-
-      let isInDirection = false;
-      let distance = 0;
-      let perpDistance = 0;
-
-      switch (direction) {
-        case 'up':
-          isInDirection = centerY < currentCenterY - 10;
-          distance = currentCenterY - centerY;
-          perpDistance = Math.abs(centerX - currentCenterX);
-          break;
-        case 'down':
-          isInDirection = centerY > currentCenterY + 10;
-          distance = centerY - currentCenterY;
-          perpDistance = Math.abs(centerX - currentCenterX);
-          break;
-        case 'left':
-          isInDirection = centerX < currentCenterX - 10;
-          distance = currentCenterX - centerX;
-          perpDistance = Math.abs(centerY - currentCenterY);
-          break;
-        case 'right':
-          isInDirection = centerX > currentCenterX + 10;
-          distance = centerX - currentCenterX;
-          perpDistance = Math.abs(centerY - currentCenterY);
-          break;
+  // Simple index-based navigation that works reliably
+  const navigateInDirection = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
+    const currentId = focusableIds[focusedIndex];
+    
+    // back -> rooms (down), rooms (first) -> back (up), last room -> input (down), input -> last room (up), input -> send (right), send -> input (left)
+    if (direction === 'down') {
+      if (currentId === 'back') {
+        // Go to first room
+        return 1;
+      } else if (currentId.startsWith('room-')) {
+        const roomIndex = focusableIds.indexOf(currentId);
+        const nextRoomIndex = roomIndex + 1;
+        if (nextRoomIndex < focusableIds.indexOf('input')) {
+          return nextRoomIndex;
+        } else {
+          // Last room -> go to input
+          return focusableIds.indexOf('input');
+        }
+      } else if (currentId === 'input') {
+        return focusableIds.indexOf('send');
       }
-
-      if (!isInDirection) return;
-
-      // Score: prefer elements closer with less perpendicular offset
-      const score = distance + perpDistance * 2;
-      if (score < bestScore) {
-        bestScore = score;
-        bestIndex = idx;
+    } else if (direction === 'up') {
+      if (currentId === 'send') {
+        return focusableIds.indexOf('input');
+      } else if (currentId === 'input') {
+        // Go to last room
+        return focusableIds.indexOf('input') - 1;
+      } else if (currentId.startsWith('room-')) {
+        const roomIndex = focusableIds.indexOf(currentId);
+        if (roomIndex > 1) {
+          return roomIndex - 1;
+        } else {
+          return 0; // back
+        }
       }
-    });
-
-    return bestIndex;
+    } else if (direction === 'right') {
+      if (currentId === 'input') {
+        return focusableIds.indexOf('send');
+      }
+    } else if (direction === 'left') {
+      if (currentId === 'send') {
+        return focusableIds.indexOf('input');
+      }
+    }
+    
+    return focusedIndex;
   }, [focusedIndex, focusableIds]);
 
   // D-pad Navigation with proper preventDefault
@@ -146,16 +130,16 @@ const CommunityChat = ({ onBack }: CommunityChatProps) => {
 
       switch (event.key) {
         case 'ArrowUp':
-          setFocusedIndex(findNearestInDirection('up'));
+          setFocusedIndex(navigateInDirection('up'));
           break;
         case 'ArrowDown':
-          setFocusedIndex(findNearestInDirection('down'));
+          setFocusedIndex(navigateInDirection('down'));
           break;
         case 'ArrowLeft':
-          setFocusedIndex(findNearestInDirection('left'));
+          setFocusedIndex(navigateInDirection('left'));
           break;
         case 'ArrowRight':
-          setFocusedIndex(findNearestInDirection('right'));
+          setFocusedIndex(navigateInDirection('right'));
           break;
         case 'Enter':
         case ' ':
@@ -176,7 +160,7 @@ const CommunityChat = ({ onBack }: CommunityChatProps) => {
     // Use capture phase to intercept before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [focusedIndex, findNearestInDirection, onBack, newMessage]);
+  }, [focusedIndex, navigateInDirection, onBack, newMessage]);
 
   // Scroll focused element into view
   useEffect(() => {

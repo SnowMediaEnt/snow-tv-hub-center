@@ -123,13 +123,22 @@ const SupportVideos = ({ onBack }: SupportVideosProps) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [focusedElement, activeTab, selectedVideo, videos, onBack]);
 
-  // Scroll focused element into view for TV navigation
+  // Scroll focused element into view for TV navigation - scroll ALL elements
   useEffect(() => {
-    if (focusedElement.startsWith('video-')) {
-      const el = document.querySelector(`[data-focus-id="video-${focusedElement.replace('video-', '')}"]`);
-      if (el) {
-        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
+    let selector = '';
+    if (focusedElement === 'back') {
+      selector = 'button'; // First button is back
+    } else if (focusedElement.startsWith('tab-')) {
+      selector = `[data-state]`; // Tab triggers
+    } else if (focusedElement.startsWith('video-')) {
+      selector = `[data-focus-id="video-${focusedElement.replace('video-', '')}"]`;
+    }
+    
+    // Always scroll to keep focused element visible
+    const el = document.querySelector(`[data-focus-id="${focusedElement}"]`) || 
+               (focusedElement === 'back' ? document.querySelector('button[variant="gold"]') : null);
+    if (el) {
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }, [focusedElement]);
 

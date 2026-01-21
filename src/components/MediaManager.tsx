@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface MediaManagerProps {
   onBack: () => void;
+  embedded?: boolean; // When true, hides the "Back to Home" button (used in Settings)
 }
 
 // Focus element types for TV navigation
@@ -27,7 +28,7 @@ type FocusElement =
   | `asset-toggle-${string}` 
   | `asset-delete-${string}`;
 
-const MediaManager = ({ onBack }: MediaManagerProps) => {
+const MediaManager = ({ onBack, embedded = false }: MediaManagerProps) => {
   const { assets, loading, uploadAsset, toggleAssetActive, deleteAsset, getAssetUrl } = useMediaAssets();
   const { user } = useAuth();
   const { profile, checkCredits, deductCredits } = useUserProfile();
@@ -42,7 +43,7 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
     section: 'home',
     description: ''
   });
-  const [focusedElement, setFocusedElement] = useState<FocusElement>('back');
+  const [focusedElement, setFocusedElement] = useState<FocusElement>(embedded ? 'prompt-input' : 'back');
   
   const promptInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -78,7 +79,7 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
       
       switch (event.key) {
         case 'ArrowDown':
-          if (focusedElement === 'back') {
+          if (focusedElement === 'back' && !embedded) {
             setFocusedElement('prompt-input');
           } else if (focusedElement === 'prompt-input') {
             setFocusedElement('asset-type');
@@ -101,7 +102,8 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
           
         case 'ArrowUp':
           if (focusedElement === 'prompt-input' || focusedElement === 'generate-btn') {
-            setFocusedElement('back');
+            if (!embedded) setFocusedElement('back');
+            // If embedded, stay on prompt-input
           } else if (focusedElement === 'asset-type') {
             setFocusedElement('prompt-input');
           } else if (focusedElement === 'file-input') {
@@ -137,7 +139,7 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
           
         case 'Enter':
         case ' ':
-          if (focusedElement === 'back') {
+          if (focusedElement === 'back' && !embedded) {
             onBack();
           } else if (focusedElement === 'prompt-input') {
             promptInputRef.current?.focus();
@@ -430,24 +432,26 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center mb-8">
-          <Button 
-            onClick={onBack}
-            variant="outline" 
-            size="lg"
-            data-focus-id="back"
-            className={`mr-6 bg-brand-gold text-brand-charcoal hover:bg-brand-gold/80 transition-all ${getFocusClass('back')}`}
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Home
-          </Button>
-          <div>
-            <h1 className="text-4xl font-bold text-white mb-2">Media Manager</h1>
-            <p className="text-xl text-blue-200">Upload and manage backgrounds, icons, and assets</p>
+    <div className={embedded ? '' : 'min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-8'}>
+      <div className={embedded ? '' : 'max-w-6xl mx-auto'}>
+        {!embedded && (
+          <div className="flex items-center mb-8">
+            <Button 
+              onClick={onBack}
+              variant="outline" 
+              size="lg"
+              data-focus-id="back"
+              className={`mr-6 bg-brand-gold text-brand-charcoal hover:bg-brand-gold/80 transition-all ${getFocusClass('back')}`}
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Back to Home
+            </Button>
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2">Media Manager</h1>
+              <p className="text-xl text-blue-200">Upload and manage backgrounds, icons, and assets</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* AI Generation Section */}
         <Card className="bg-gradient-to-br from-purple-600 to-purple-800 border-purple-500 p-6 mb-6">

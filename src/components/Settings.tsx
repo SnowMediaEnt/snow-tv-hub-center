@@ -210,7 +210,7 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
           <TabsContent value="media" className="mt-6">
             <Card className="bg-gradient-to-br from-purple-600 to-purple-800 border-purple-500 p-6">
               <h2 className="text-2xl font-bold text-white mb-6">Media Manager</h2>
-              <MediaManager onBack={() => setActiveTab('layout')} />
+              <MediaManager onBack={() => setActiveTab('layout')} embedded={true} />
             </Card>
           </TabsContent>
 
