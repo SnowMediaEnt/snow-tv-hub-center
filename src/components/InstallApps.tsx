@@ -1,17 +1,15 @@
-
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Download, Play, Package, Smartphone, Tv, Settings, HardDrive, Database, Trash2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Download, Play, Smartphone, Tv, Settings, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAppData } from '@/hooks/useAppData';
-import DownloadProgress from './DownloadProgress';
-import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { AppManager } from '@/capacitor/AppManager';
-import { downloadApkToCache, generateFileName, generatePackageName } from '@/utils/downloadApk';
+import { generatePackageName } from '@/utils/downloadApk';
 
 interface InstallAppsProps {
   onBack: () => void;
@@ -65,14 +63,9 @@ const InstallApps = ({ onBack }: InstallAppsProps) => {
 };
 
 const InstallAppsContent = ({ onBack, apps }: { onBack: () => void; apps: AppData[] }) => {
-  const [downloadingApps, setDownloadingApps] = useState<Set<string>>(new Set());
-  const [downloadedApps, setDownloadedApps] = useState<Set<string>>(new Set());
-  const [installedApps, setInstalledApps] = useState<Set<string>>(new Set());
-  const [appStatuses, setAppStatuses] = useState<Map<string, { downloaded: boolean; installed: boolean; lastPath?: string }>>(new Map());
-  const [currentDownload, setCurrentDownload] = useState<AppData | null>(null);
+  const [appStatuses, setAppStatuses] = useState<Map<string, { installed: boolean }>>(new Map());
   const [focusedElement, setFocusedElement] = useState<'back' | 'tab-0' | 'tab-1' | 'tab-2' | 'tab-3' | string>('back');
   const [activeTab, setActiveTab] = useState<string>('featured');
-  const [selectedApp, setSelectedApp] = useState<AppData | null>(null);
   const { toast } = useToast();
   const focusedElementRef = useRef<HTMLElement>(null);
 
@@ -169,35 +162,35 @@ const InstallAppsContent = ({ onBack, apps }: { onBack: () => void; apps: AppDat
   }, [focusedElement, activeTab, onBack, apps]);
 
   // App status management functions
-  const generateAppFileName = (app: AppData) => generateFileName(app.name, app.version);
   const generateAppPackageName = (app: AppData) => app.packageName || generatePackageName(app.name);
-  
-  const isDownloaded = async (app: AppData): Promise<boolean> => {
+
+  const checkInstallStatus = useCallback(async (app: AppData): Promise<boolean> => {
     try {
-      const fileName = generateAppFileName(app);
-      await Filesystem.stat({
-        path: `apk/${fileName}`,
-        directory: Directory.Cache,
-      });
-      return true;
-    } catch {
+      const packageName = generateAppPackageName(app);
+      console.log(`Checking install status for ${app.name} (${packageName})`);
+      
+      if (Capacitor.isNativePlatform()) {
+        const { installed } = await AppManager.isInstalled({ packageName });
+        console.log(`${app.name} installed: ${installed}`);
+        return installed;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking install status:', error);
       return false;
     }
-  };
+  }, []);
 
-  const ensureStatus = useCallback(async (app: AppData): Promise<{ downloaded: boolean; installed: boolean }> => {
+  const ensureStatus = useCallback(async (app: AppData): Promise<{ installed: boolean }> => {
     try {
-      const downloaded = await isDownloaded(app);
-      const packageName = generateAppPackageName(app);
-      const { installed } = await AppManager.isInstalled({ packageName });
-      
-      setAppStatuses(prev => new Map(prev.set(app.id, { downloaded, installed })));
-      return { downloaded, installed };
+      const installed = await checkInstallStatus(app);
+      setAppStatuses(prev => new Map(prev.set(app.id, { installed })));
+      return { installed };
     } catch (error) {
       console.error('Error checking app status:', error);
-      return { downloaded: false, installed: false };
+      return { installed: false };
     }
-  }, []);
+  }, [checkInstallStatus]);
 
   const handleDownload = useCallback(async (app: AppData) => {
     if (!app.downloadUrl) {
@@ -209,37 +202,39 @@ const InstallAppsContent = ({ onBack, apps }: { onBack: () => void; apps: AppDat
       return;
     }
 
-    setDownloadingApps(prev => new Set(prev.add(app.id)));
-    
     try {
-      const fileName = generateAppFileName(app);
-      const path = await downloadApkToCache(app.downloadUrl, fileName);
+      // Ensure URL has proper protocol
+      let url = app.downloadUrl;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = `https://${url}`;
+      }
       
-      setAppStatuses(prev => new Map(prev.set(app.id, { 
-        downloaded: true, 
-        installed: prev.get(app.id)?.installed || false,
-        lastPath: path 
-      })));
+      console.log('Opening download URL:', url);
+      
+      // Simply open the URL - let the system handle the download
+      if (Capacitor.isNativePlatform()) {
+        await Browser.open({ url });
+      } else {
+        window.open(url, '_blank');
+      }
       
       toast({
-        title: "Download Complete",
-        description: `${app.name} downloaded successfully!`,
+        title: "Download Started",
+        description: `${app.name} download opened. Check your downloads folder or install prompt.`,
       });
+      
+      // Re-check install status after a delay (user might install it)
+      setTimeout(() => ensureStatus(app), 5000);
+      
     } catch (error) {
       console.error('Download error:', error);
       toast({
         title: "Download Failed",
-        description: `Failed to download ${app.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: `Failed to open download: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
-    } finally {
-      setDownloadingApps(prev => {
-        const updated = new Set(prev);
-        updated.delete(app.id);
-        return updated;
-      });
     }
-  }, [toast]);
+  }, [toast, ensureStatus]);
 
   // Initialize app statuses when apps load
   useEffect(() => {
@@ -250,34 +245,17 @@ const InstallAppsContent = ({ onBack, apps }: { onBack: () => void; apps: AppDat
     }
   }, [apps, ensureStatus]);
 
-  const handleInstall = async (app: AppData) => {
-    try {
-      const status = appStatuses.get(app.id);
-      const path = status?.lastPath || await Filesystem.getUri({
-        path: `apk/${generateAppFileName(app)}`,
-        directory: Directory.Cache
-      }).then(r => r.uri);
-      
-      await AppManager.installApk({ filePath: path });
-      
-      // Re-check installation status after user returns from installer
-      setTimeout(async () => {
-        await ensureStatus(app);
-      }, 1000);
-      
-      toast({
-        title: "Opening Installer",
-        description: `Please complete installation for ${app.name}`,
-      });
-    } catch (error) {
-      console.error('Install error:', error);
-      toast({
-        title: "Installation Failed",
-        description: `Could not start installer: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive",
-      });
-    }
-  };
+  // Re-check all app statuses (useful after returning from external actions)
+  const refreshAllStatuses = useCallback(() => {
+    apps.forEach(app => ensureStatus(app));
+  }, [apps, ensureStatus]);
+
+  // Refresh statuses when component becomes visible/focused
+  useEffect(() => {
+    const handleFocus = () => refreshAllStatuses();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refreshAllStatuses]);
 
   const handleLaunch = async (app: AppData) => {
     try {
@@ -363,11 +341,9 @@ const InstallAppsContent = ({ onBack, apps }: { onBack: () => void; apps: AppDat
     <div className="space-y-4 pb-8">
       <div className="space-y-4">
         {categoryApps.map((app) => {
-          const status = appStatuses.get(app.id) || { downloaded: false, installed: false };
-          const isDownloading = downloadingApps.has(app.id);
-          const isDownloaded = status.downloaded;
+          const status = appStatuses.get(app.id) || { installed: false };
           const isInstalled = status.installed;
-          const isFocused = focusedElement === `app-${app.id}` || focusedElement.startsWith(`download-${app.id}`) || focusedElement.startsWith(`install-${app.id}`) || focusedElement.startsWith(`launch-${app.id}`);
+          const isFocused = focusedElement === `app-${app.id}` || focusedElement.startsWith(`download-${app.id}`) || focusedElement.startsWith(`launch-${app.id}`);
           
           return (
             <Card key={app.id} className={`bg-gradient-to-br from-slate-700/80 to-slate-800/80 border-slate-600 overflow-hidden hover:scale-105 transition-all duration-300 ${isFocused ? 'ring-2 ring-brand-ice scale-105' : ''}`}>
@@ -409,33 +385,22 @@ const InstallAppsContent = ({ onBack, apps }: { onBack: () => void; apps: AppDat
               
               <div className="space-y-2">
                 <div className="flex gap-2">
-                  {/* Download Button - Only available if not downloading/downloaded/installed */}
-                  <Button 
-                    onClick={() => handleDownload(app)}
-                    disabled={isDownloading || isDownloaded || isInstalled}
-                    className={`flex-1 ${focusedElement === `download-${app.id}` ? 'ring-2 ring-white' : ''} ${isDownloading || isDownloaded || isInstalled ? 'bg-gray-600 text-gray-400' : 'bg-brand-ice hover:bg-brand-ice/80 text-white'}`}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    {isDownloading ? 'Downloading...' : isDownloaded ? 'Downloaded' : 'Download'}
-                  </Button>
+                  {/* Show Download button if NOT installed */}
+                  {!isInstalled && (
+                    <Button 
+                      onClick={() => handleDownload(app)}
+                      className={`flex-1 ${focusedElement === `download-${app.id}` ? 'ring-2 ring-white' : ''} bg-brand-ice hover:bg-brand-ice/80 text-white`}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                  )}
                   
-                  {/* Install Button - Only available after download completes */}
-                  <Button 
-                    onClick={() => handleInstall(app)}
-                    disabled={!isDownloaded || isInstalled}
-                    variant="outline"
-                    className={`${isDownloaded && !isInstalled ? 'bg-green-600/20 border-green-500/50 text-green-400 hover:bg-green-600/30' : 'bg-gray-600/20 border-gray-500/50 text-gray-400'}`}
-                  >
-                    <Package className="w-4 h-4 mr-2" />
-                    {isInstalled ? 'Installed' : 'Install'}
-                  </Button>
-                  
-                  {/* Launch Button - Only available after install */}
+                  {/* Launch Button - Only available if installed */}
                   {isInstalled && (
                     <Button 
                       onClick={() => handleLaunch(app)}
-                      variant="outline"
-                      className="bg-purple-600 border-purple-500 text-white hover:bg-purple-700"
+                      className="flex-1 bg-primary hover:bg-primary/80 text-primary-foreground"
                     >
                       <Play className="w-4 h-4 mr-2" />
                       Launch
