@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Send, Users, Pin, Reply, Clock } from 'lucide-react';
+import { ArrowLeft, Send, Users, Pin, Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -24,8 +24,6 @@ interface CommunityChatProps {
   onBack: () => void;
 }
 
-type FocusType = 'back' | `room-${string}` | 'input' | 'send';
-
 const CommunityChat = ({ onBack }: CommunityChatProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -34,9 +32,11 @@ const CommunityChat = ({ onBack }: CommunityChatProps) => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState('general');
-  const [focusedElement, setFocusedElement] = useState<FocusType>('back');
+  const [focusedIndex, setFocusedIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const sendMessageRef = useRef<() => void>(() => {});
 
   const rooms = [
     { id: 'general', name: 'General', description: 'General discussion' },
@@ -45,125 +45,150 @@ const CommunityChat = ({ onBack }: CommunityChatProps) => {
     { id: 'feedback', name: 'Feedback', description: 'Share your feedback' }
   ];
 
-  // D-pad Navigation
+  // Build focusable elements list: back, rooms..., input, send
+  const focusableIds = ['back', ...rooms.map(r => `room-${r.id}`), 'input', 'send'];
+
+  const getCurrentFocusId = () => focusableIds[focusedIndex];
+
+  // Spatial navigation using element positions
+  const findNearestInDirection = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
+    if (!containerRef.current) return focusedIndex;
+
+    const elements = containerRef.current.querySelectorAll('[data-focus-id]');
+    const currentEl = containerRef.current.querySelector(`[data-focus-id="${getCurrentFocusId()}"]`);
+    if (!currentEl) return 0;
+
+    const currentRect = currentEl.getBoundingClientRect();
+    const currentCenterX = currentRect.left + currentRect.width / 2;
+    const currentCenterY = currentRect.top + currentRect.height / 2;
+
+    let bestIndex = focusedIndex;
+    let bestScore = Infinity;
+
+    elements.forEach((el) => {
+      const id = el.getAttribute('data-focus-id');
+      const idx = focusableIds.indexOf(id || '');
+      if (idx === -1 || idx === focusedIndex) return;
+
+      const rect = el.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      let isInDirection = false;
+      let distance = 0;
+      let perpDistance = 0;
+
+      switch (direction) {
+        case 'up':
+          isInDirection = centerY < currentCenterY - 10;
+          distance = currentCenterY - centerY;
+          perpDistance = Math.abs(centerX - currentCenterX);
+          break;
+        case 'down':
+          isInDirection = centerY > currentCenterY + 10;
+          distance = centerY - currentCenterY;
+          perpDistance = Math.abs(centerX - currentCenterX);
+          break;
+        case 'left':
+          isInDirection = centerX < currentCenterX - 10;
+          distance = currentCenterX - centerX;
+          perpDistance = Math.abs(centerY - currentCenterY);
+          break;
+        case 'right':
+          isInDirection = centerX > currentCenterX + 10;
+          distance = centerX - currentCenterX;
+          perpDistance = Math.abs(centerY - currentCenterY);
+          break;
+      }
+
+      if (!isInDirection) return;
+
+      // Score: prefer elements closer with less perpendicular offset
+      const score = distance + perpDistance * 2;
+      if (score < bestScore) {
+        bestScore = score;
+        bestIndex = idx;
+      }
+    });
+
+    return bestIndex;
+  }, [focusedIndex, focusableIds]);
+
+  // D-pad Navigation with proper preventDefault
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
       const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
 
-      // Handle back button
-      if (event.key === 'Escape' || event.keyCode === 4 || event.which === 4 || event.code === 'GoBack') {
+      // Handle back button (always)
+      if (event.key === 'Escape' || event.keyCode === 4 || event.code === 'GoBack') {
         event.preventDefault();
         event.stopPropagation();
         onBack();
         return;
       }
 
-      // Allow typing in input
-      if (isTyping && !['ArrowUp', 'ArrowDown'].includes(event.key)) {
+      // Allow backspace when typing
+      if (event.key === 'Backspace' && isTyping) {
         return;
       }
 
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key)) {
-        event.preventDefault();
+      // Allow normal typing except arrow navigation
+      if (isTyping && !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+        return;
       }
 
-      const roomIds = rooms.map(r => `room-${r.id}`);
-      const currentRoomIdx = roomIds.indexOf(focusedElement);
+      // CRITICAL: preventDefault on ALL arrow keys to stop WebView scrolling
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
 
       switch (event.key) {
         case 'ArrowUp':
-          if (focusedElement === 'input' || focusedElement === 'send') {
-            setFocusedElement(`room-${rooms[rooms.length - 1].id}` as FocusType);
-          } else if (currentRoomIdx > 0) {
-            setFocusedElement(`room-${rooms[currentRoomIdx - 1].id}` as FocusType);
-          } else if (currentRoomIdx === 0) {
-            setFocusedElement('back');
-          }
+          setFocusedIndex(findNearestInDirection('up'));
           break;
-
         case 'ArrowDown':
-          if (focusedElement === 'back') {
-            setFocusedElement(`room-${rooms[0].id}` as FocusType);
-          } else if (currentRoomIdx >= 0 && currentRoomIdx < rooms.length - 1) {
-            setFocusedElement(`room-${rooms[currentRoomIdx + 1].id}` as FocusType);
-          } else if (currentRoomIdx === rooms.length - 1) {
-            setFocusedElement('input');
-          }
+          setFocusedIndex(findNearestInDirection('down'));
           break;
-
-        case 'ArrowRight':
-          if (focusedElement === 'input') {
-            setFocusedElement('send');
-          } else if (focusedElement === 'back') {
-            setFocusedElement(`room-${rooms[0].id}` as FocusType);
-          }
-          break;
-
         case 'ArrowLeft':
-          if (focusedElement === 'send') {
-            setFocusedElement('input');
-          } else if (focusedElement.startsWith('room-')) {
-            setFocusedElement('back');
-          }
+          setFocusedIndex(findNearestInDirection('left'));
           break;
-
+        case 'ArrowRight':
+          setFocusedIndex(findNearestInDirection('right'));
+          break;
         case 'Enter':
         case ' ':
-          if (focusedElement === 'back') {
+          const currentId = getCurrentFocusId();
+          if (currentId === 'back') {
             onBack();
-          } else if (focusedElement.startsWith('room-')) {
-            const roomId = focusedElement.replace('room-', '');
-            setSelectedRoom(roomId);
-          } else if (focusedElement === 'input') {
+          } else if (currentId.startsWith('room-')) {
+            setSelectedRoom(currentId.replace('room-', ''));
+          } else if (currentId === 'input') {
             inputRef.current?.focus();
-          } else if (focusedElement === 'send') {
-            sendMessage();
+          } else if (currentId === 'send') {
+            sendMessageRef.current();
           }
           break;
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedElement, onBack, rooms, newMessage]);
+    // Use capture phase to intercept before other handlers
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [focusedIndex, findNearestInDirection, onBack, newMessage]);
 
   // Scroll focused element into view
   useEffect(() => {
-    const el = document.querySelector(`[data-focus-id="${focusedElement}"]`);
+    const currentId = getCurrentFocusId();
+    const el = containerRef.current?.querySelector(`[data-focus-id="${currentId}"]`);
     if (el) {
       el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
-  }, [focusedElement]);
+  }, [focusedIndex]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const fetchMessages = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('community_messages')
-        .select('*')
-        .eq('room_id', selectedRoom)
-        .order('created_at', { ascending: true })
-        .limit(100);
-
-      if (error) throw error;
-      setMessages(data || []);
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load messages",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendMessage = async () => {
+  // sendMessage function
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !user || sending) return;
 
     setSending(true);
@@ -196,44 +221,14 @@ const CommunityChat = ({ onBack }: CommunityChatProps) => {
     }
   };
 
-  useEffect(() => {
-    fetchMessages();
-  }, [selectedRoom]);
+  // Keep ref updated
+  sendMessageRef.current = handleSendMessage;
 
-  useEffect(() => {
-    if (!loading) {
-      scrollToBottom();
-    }
-  }, [messages, loading]);
-
-  // Real-time subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel('community-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'community_messages',
-          filter: `room_id=eq.${selectedRoom}`
-        },
-        (payload) => {
-          setMessages(prev => [...prev, payload.new as CommunityMessage]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [selectedRoom]);
-
-  const isFocused = (id: string) => focusedElement === id;
-  const focusRing = (id: string) => isFocused(id) ? 'ring-4 ring-brand-ice ring-offset-2 ring-offset-slate-800 scale-105' : '';
+  const isFocused = (id: string) => getCurrentFocusId() === id;
+  const focusRing = (id: string) => isFocused(id) ? 'ring-4 ring-brand-ice ring-offset-2 ring-offset-slate-800 scale-105 z-10' : '';
 
   return (
-    <div className="tv-scroll-container tv-safe text-white">
+    <div ref={containerRef} className="tv-scroll-container tv-safe text-white">
       <div className="max-w-6xl mx-auto pb-16">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -353,12 +348,12 @@ const CommunityChat = ({ onBack }: CommunityChatProps) => {
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder={`Message #${rooms.find(r => r.id === selectedRoom)?.name}...`}
                       className={`flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/60 transition-all duration-200 ${focusRing('input')}`}
-                      onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                      onKeyPress={(e) => e.key === 'Enter' && sendMessageRef.current()}
                       disabled={sending}
                     />
                     <Button
                       data-focus-id="send"
-                      onClick={sendMessage}
+                      onClick={() => sendMessageRef.current()}
                       disabled={!newMessage.trim() || sending}
                       className={`bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 ${focusRing('send')}`}
                     >
