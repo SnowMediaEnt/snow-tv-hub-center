@@ -1,5 +1,6 @@
-
 import { useState, useEffect } from 'react';
+import { isNativePlatform } from '@/utils/platform';
+import { robustFetch } from '@/utils/network';
 
 const NewsTicker = () => {
   const [newsItems, setNewsItems] = useState<string[]>([
@@ -8,18 +9,39 @@ const NewsTicker = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fallbackNews = [
+    "🚀 New streaming app update available",
+    "📺 Live support available now - Chat with Snow Media",
+    "🎬 Fresh video tutorials added to Support section",
+    "💫 Snow Media Store updated with new content"
+  ];
+
   useEffect(() => {
     const fetchRSSFeed = async () => {
       try {
-        console.log('Fetching RSS feed from: https://snowmediaapps.com/smc/newsfeed.xml');
-        // Using a CORS proxy to fetch the RSS feed
-        const response = await fetch(`https://api.allorigins.win/raw?url=https://snowmediaapps.com/smc/newsfeed.xml`);
+        const isNative = isNativePlatform();
+        const rssUrl = 'https://snowmediaapps.com/smc/newsfeed.xml';
+        
+        console.log(`Fetching RSS feed (native: ${isNative})...`);
+        
+        const response = await robustFetch(rssUrl, {
+          timeout: 10000,
+          retries: 2,
+          useCorsProxy: !isNative,
+        });
+        
         const xmlText = await response.text();
-        console.log('RSS feed XML response:', xmlText);
+        console.log('RSS feed response:', xmlText.substring(0, 200));
         
         // Parse the XML
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+        
+        // Check for parse errors
+        const parseError = xmlDoc.querySelector('parsererror');
+        if (parseError) {
+          throw new Error('XML parse error');
+        }
         
         // Extract news items from RSS feed
         const items = xmlDoc.querySelectorAll('item');
@@ -44,23 +66,18 @@ const NewsTicker = () => {
           }
         });
 
-        console.log('Parsed news items:', newsArray);
+        console.log('Parsed news items:', newsArray.length);
 
         if (newsArray.length > 0) {
           setNewsItems(newsArray);
         } else {
-          setNewsItems(["No news items available"]);
+          setNewsItems(fallbackNews);
         }
         
         setIsLoading(false);
       } catch (error) {
-        console.error('Error fetching RSS feed:', error);
-        setNewsItems([
-          "🚀 New streaming app update available",
-          "📺 Live support available now - Chat with Snow Media",
-          "🎬 Fresh video tutorials added to Support section",
-          "💫 Snow Media Store updated with new content"
-        ]);
+        console.warn('Error fetching RSS feed:', error);
+        setNewsItems(fallbackNews);
         setIsLoading(false);
       }
     };
@@ -68,7 +85,7 @@ const NewsTicker = () => {
     fetchRSSFeed();
     
     // Refresh RSS feed every 1 minute
-    const refreshInterval = setInterval(fetchRSSFeed, 1 * 60 * 1000);
+    const refreshInterval = setInterval(fetchRSSFeed, 60000);
     
     return () => clearInterval(refreshInterval);
   }, []);
@@ -77,7 +94,7 @@ const NewsTicker = () => {
     if (!isLoading && newsItems.length > 0) {
       const interval = setInterval(() => {
         setCurrentIndex((prev) => (prev + 1) % newsItems.length);
-      }, 33750); // Match the scroll animation duration (75% slower than original)
+      }, 33750); // Match the scroll animation duration
 
       return () => clearInterval(interval);
     }

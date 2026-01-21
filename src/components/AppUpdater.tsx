@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Download, RefreshCw, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { Download, RefreshCw, CheckCircle, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Capacitor } from '@capacitor/core';
+import { isNativePlatform } from '@/utils/platform';
+import { robustFetch } from '@/utils/network';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
 interface UpdateInfo {
@@ -22,8 +22,8 @@ interface AppUpdaterProps {
 }
 
 const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
-  const [currentVersion, setCurrentVersion] = useState('1.0.2'); // Fixed starting version to match home screen
-  const [focusedElement, setFocusedElement] = useState(0); // 0: check button, 1: download button
+  const [currentVersion, setCurrentVersion] = useState('1.0.2');
+  const [focusedElement, setFocusedElement] = useState(0);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -36,93 +36,37 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
     
     setIsChecking(true);
     try {
-      // Try multiple update sources
-      let data: UpdateInfo | null = null;
       const updateUrl = 'https://snowmediaapps.com/smc/update.json';
       const timestamp = Date.now();
+      const isNative = isNativePlatform();
       
-      // On native platform, fetch directly (no CORS issues)
-      if (Capacitor.isNativePlatform()) {
-        console.log('Native platform: fetching update.json directly');
-        try {
-          const response = await fetch(`${updateUrl}?ts=${timestamp}`, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' },
-            cache: 'no-store'
-          });
-          
-          if (response.ok) {
-            const text = await response.text();
-            console.log('Direct fetch response:', text.substring(0, 200));
-            
-            if (text.trim().startsWith('{')) {
-              data = JSON.parse(text);
-            }
-          }
-        } catch (error) {
-          console.log('Direct fetch failed:', error);
+      console.log(`Checking for updates (native: ${isNative})...`);
+      
+      const response = await robustFetch(`${updateUrl}?ts=${timestamp}`, {
+        timeout: 15000,
+        retries: 3,
+        useCorsProxy: !isNative,
+        headers: { 'Accept': 'application/json' },
+      });
+      
+      const text = await response.text();
+      console.log('Update response:', text.substring(0, 200));
+      
+      // Handle wrapped responses from CORS proxies
+      let data: UpdateInfo;
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed.contents) {
+          data = JSON.parse(parsed.contents);
+        } else {
+          data = parsed;
         }
+      } catch {
+        throw new Error('Invalid update data received');
       }
       
-      // If direct fetch failed or we're on web, try CORS proxies
-      if (!data) {
-        const corsProxies = [
-          `https://api.allorigins.win/raw?url=${encodeURIComponent(updateUrl + '?ts=' + timestamp)}`,
-          `https://corsproxy.io/?${encodeURIComponent(updateUrl + '?ts=' + timestamp)}`,
-          `https://api.allorigins.win/get?url=${encodeURIComponent(updateUrl + '?ts=' + timestamp)}`
-        ];
-        
-        for (const proxyUrl of corsProxies) {
-          try {
-            console.log(`Trying proxy: ${proxyUrl}`);
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            const response = await fetch(proxyUrl, {
-              method: 'GET',
-              headers: { 'Accept': 'application/json' },
-              cache: 'no-store',
-              signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (response.ok) {
-              const text = await response.text();
-              console.log(`Response from proxy:`, text.substring(0, 200));
-              
-              // Handle allorigins.win wrapped response
-              if (proxyUrl.includes('allorigins.win/get')) {
-                try {
-                  const wrapped = JSON.parse(text);
-                  if (wrapped.contents) {
-                    data = JSON.parse(wrapped.contents);
-                    break;
-                  }
-                } catch (e) {
-                  console.log('Failed to parse allorigins wrapped response');
-                  continue;
-                }
-              } else if (text.trim().startsWith('{')) {
-                data = JSON.parse(text);
-                break;
-              }
-            }
-          } catch (error) {
-            console.log(`Proxy failed:`, error);
-            continue;
-          }
-        }
-      }
-      
-      // If all methods failed, throw error
-      if (!data) {
-        throw new Error('Unable to check for updates. Please check your internet connection and try again.');
-      }
-      
-      if (!data || !data.version || !data.downloadUrl) {
-        throw new Error('Invalid update information received');
+      if (!data?.version || !data?.downloadUrl) {
+        throw new Error('Invalid update information');
       }
       
       // Compare versions
@@ -133,7 +77,7 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
         if (autoCheck) {
           toast({
             title: "Update Available",
-            description: `Version ${data.version} is available for download`,
+            description: `Version ${data.version} is available`,
           });
         }
       } else {
@@ -147,12 +91,10 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
       }
     } catch (error) {
       console.error('Update check failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
       if (!autoCheck) {
         toast({
           title: "Update Check Failed",
-          description: errorMessage,
+          description: error instanceof Error ? error.message : 'Unknown error',
           variant: "destructive",
         });
       }
@@ -183,20 +125,53 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
     setDownloadProgress(0);
     
     try {
-      if (Capacitor.isNativePlatform()) {
-        // Download the APK update
+      if (isNativePlatform()) {
+        // Native download with progress
         const response = await fetch(updateInfo.downloadUrl);
         
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`HTTP error: ${response.status}`);
         }
         
-        const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+        const contentLength = response.headers.get('content-length');
+        const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
         
-        // Save to device
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('Failed to get reader');
+        
+        const chunks: Uint8Array[] = [];
+        let receivedLength = 0;
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          chunks.push(value);
+          receivedLength += value.length;
+          
+          if (totalSize > 0) {
+            setDownloadProgress(Math.round((receivedLength / totalSize) * 100));
+          }
+        }
+        
+        // Combine chunks
+        const allChunks = new Uint8Array(receivedLength);
+        let position = 0;
+        for (const chunk of chunks) {
+          allChunks.set(chunk, position);
+          position += chunk.length;
+        }
+        
+        // Convert to base64 in chunks
+        const chunkSize = 32768;
+        let base64 = '';
+        for (let i = 0; i < allChunks.length; i += chunkSize) {
+          const chunk = allChunks.subarray(i, Math.min(i + chunkSize, allChunks.length));
+          base64 += btoa(String.fromCharCode.apply(null, Array.from(chunk)));
+        }
+        
         const fileName = `snow_media_center_${updateInfo.version}.apk`;
+        
         await Filesystem.writeFile({
           path: `Downloads/${fileName}`,
           data: base64,
@@ -205,31 +180,18 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
         
         toast({
           title: "Update Downloaded",
-          description: `Version ${updateInfo.version} saved to Downloads. Tap to install.`,
+          description: `Version ${updateInfo.version} saved to Downloads`,
         });
         
-        // Update current version after successful download
         setCurrentVersion(updateInfo.version);
         setUpdateAvailable(false);
         setUpdateInfo(null);
-        
-        // Try to open the APK for installation
-        const installIntent = `intent:#Intent;action=android.intent.action.VIEW;data=file:///storage/emulated/0/Download/${fileName};type=application/vnd.android.package-archive;flags=0x10000000;end`;
-        
-        setTimeout(() => {
-          if (window.open) {
-            window.open(installIntent, '_system');
-          } else {
-            window.location.href = installIntent;
-          }
-        }, 1000);
         
       } else {
         // Web fallback - direct download
         const link = document.createElement('a');
         link.href = updateInfo.downloadUrl;
         link.download = `snow_media_center_${updateInfo.version}.apk`;
-        link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -239,7 +201,6 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
           description: `Version ${updateInfo.version} download initiated`,
         });
         
-        // Update current version after successful download
         setCurrentVersion(updateInfo.version);
         setUpdateAvailable(false);
         setUpdateInfo(null);
@@ -249,7 +210,7 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
       console.error('Download failed:', error);
       toast({
         title: "Download Failed",
-        description: "Failed to download update. Please try again.",
+        description: "Please try again",
         variant: "destructive",
       });
     } finally {
@@ -288,23 +249,17 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [focusedElement, updateAvailable]);
 
-  // Auto-check for updates on component mount and every few minutes
+  // Auto-check on mount and periodically
   useEffect(() => {
     if (autoCheck) {
       checkForUpdates();
-      
-      // Set up interval to check every 3 minutes (180000ms)
-      const interval = setInterval(() => {
-        checkForUpdates();
-      }, 180000);
-      
-      // Cleanup interval on unmount
+      const interval = setInterval(checkForUpdates, 180000);
       return () => clearInterval(interval);
     }
   }, [autoCheck]);
 
   if (!updateAvailable && autoCheck) {
-    return null; // Don't render anything if no update and auto-checking
+    return null;
   }
 
   return (
@@ -338,10 +293,6 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
               <span className="text-green-400 font-semibold">Update Available</span>
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-blue-200">Current Version:</span>
-                <span className="text-white font-semibold">{currentVersion}</span>
-              </div>
               <div className="flex items-center justify-between">
                 <span className="text-blue-200">Available Version:</span>
                 <span className="text-green-400 font-semibold">{updateInfo.version}</span>
@@ -382,7 +333,7 @@ const AppUpdater = ({ onClose, autoCheck = false }: AppUpdaterProps) => {
               }`}
             >
               <Download className="w-4 h-4 mr-2" />
-              {isDownloading ? `Downloading... ${downloadProgress}%` : 'Download Update'}
+              {isDownloading ? `${downloadProgress}%` : 'Download'}
             </Button>
           )}
         </div>
