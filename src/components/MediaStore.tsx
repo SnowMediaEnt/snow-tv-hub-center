@@ -58,10 +58,10 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
       
       switch (event.key) {
         case 'ArrowLeft':
-          if (focusedElement === 'cart') {
-            setFocusedElement(user ? 'back' : 'signin');
-          } else if (focusedElement === 'signin') {
+          if (focusedElement === 'signin') {
             setFocusedElement('back');
+          } else if (focusedElement === 'cart') {
+            setFocusedElement(user ? 'back' : 'signin');
           } else if (focusedElement.startsWith('category-')) {
             const idx = categoryIds.indexOf(focusedElement);
             if (idx > 0) {
@@ -104,7 +104,7 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
               setFocusedElement(categoryIds[0] || 'back');
             }
           } else if (focusedElement.startsWith('category-')) {
-            // Move from categories to signin/cart row (not directly to back)
+            // Move from categories to signin/cart row
             setFocusedElement(user ? 'cart' : 'signin');
           } else if (focusedElement === 'signin' || focusedElement === 'cart') {
             setFocusedElement('back');
@@ -113,10 +113,17 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
           
         case 'ArrowDown':
           if (focusedElement === 'back') {
-            // From back, go to signin/cart first (not categories)
+            // From back, go to signin (if not logged in) or cart (if logged in)
             setFocusedElement(user ? 'cart' : 'signin');
-          } else if (focusedElement === 'signin' || focusedElement === 'cart') {
-            // From signin/cart, go to categories
+          } else if (focusedElement === 'signin') {
+            // From signin, go to categories
+            if (categoryIds.length > 0) {
+              setFocusedElement(categoryIds[0]);
+            } else if (filteredProducts.length > 0) {
+              setFocusedElement(`product-${filteredProducts[0].id}`);
+            }
+          } else if (focusedElement === 'cart') {
+            // From cart, go to categories
             if (categoryIds.length > 0) {
               setFocusedElement(categoryIds[0]);
             } else if (filteredProducts.length > 0) {

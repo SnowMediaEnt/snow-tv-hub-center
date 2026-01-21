@@ -26,59 +26,60 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
   const [focusedElement, setFocusedElement] = useState(0); // 0: back, 1: sign out, 2-5: tabs, 6-7: action buttons
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Focus positions:
+  // 0: back, 1: signout
+  // 2: purchase credits, 3: community chat
+  // 4: overview tab, 5: credits tab, 6: store tab, 7: referrals tab
+
   // Android TV/Firestick navigation
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      event.preventDefault();
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key)) {
+        event.preventDefault();
+      }
+      
+      // Handle back
+      if (event.key === 'Escape' || event.key === 'Backspace' || event.keyCode === 4) {
+        event.preventDefault();
+        onViewChange('home');
+        return;
+      }
       
       switch (event.key) {
         case 'ArrowLeft':
-          if (focusedElement > 0) {
-            setFocusedElement(focusedElement - 1);
-          }
+          if (focusedElement === 1) setFocusedElement(0); // signout -> back
+          else if (focusedElement === 3) setFocusedElement(2); // community -> purchase
+          else if (focusedElement > 4 && focusedElement <= 7) setFocusedElement(focusedElement - 1); // tabs
           break;
         case 'ArrowRight':
-          if (focusedElement < 7) {
-            setFocusedElement(focusedElement + 1);
-          }
+          if (focusedElement === 0) setFocusedElement(1); // back -> signout
+          else if (focusedElement === 2) setFocusedElement(3); // purchase -> community
+          else if (focusedElement >= 4 && focusedElement < 7) setFocusedElement(focusedElement + 1); // tabs
           break;
         case 'ArrowUp':
-          if (focusedElement >= 6) {
-            setFocusedElement(focusedElement - 4); // Move from action buttons to tabs
-          } else if (focusedElement >= 2) {
-            setFocusedElement(focusedElement - 2); // Move from tabs to header buttons
+          if (focusedElement === 2 || focusedElement === 3) {
+            setFocusedElement(0); // action buttons -> back
+          } else if (focusedElement >= 4 && focusedElement <= 7) {
+            setFocusedElement(2); // tabs -> purchase credits
           }
           break;
         case 'ArrowDown':
-          if (focusedElement <= 1) {
-            setFocusedElement(focusedElement + 2); // Move from header to tabs
-          } else if (focusedElement <= 5) {
-            setFocusedElement(Math.min(focusedElement + 4, 7)); // Move from tabs to action buttons
+          if (focusedElement === 0 || focusedElement === 1) {
+            setFocusedElement(2); // header -> purchase credits
+          } else if (focusedElement === 2 || focusedElement === 3) {
+            setFocusedElement(4); // action buttons -> first tab
           }
           break;
         case 'Enter':
         case ' ':
-          if (focusedElement === 0) {
-            onViewChange('home');
-          } else if (focusedElement === 1) {
-            handleSignOut();
-          } else if (focusedElement === 2) {
-            setActiveTab('overview');
-          } else if (focusedElement === 3) {
-            setActiveTab('credits');
-          } else if (focusedElement === 4) {
-            setActiveTab('store');
-          } else if (focusedElement === 5) {
-            setActiveTab('referrals');
-          } else if (focusedElement === 6) {
-            onCreditStore();
-          } else if (focusedElement === 7) {
-            onCommunityChat();
-          }
-          break;
-        case 'Escape':
-        case 'Backspace':
-          onViewChange('home');
+          if (focusedElement === 0) onViewChange('home');
+          else if (focusedElement === 1) handleSignOut();
+          else if (focusedElement === 2) onCreditStore();
+          else if (focusedElement === 3) onCommunityChat();
+          else if (focusedElement === 4) setActiveTab('overview');
+          else if (focusedElement === 5) setActiveTab('credits');
+          else if (focusedElement === 6) setActiveTab('store');
+          else if (focusedElement === 7) setActiveTab('referrals');
           break;
       }
     };
@@ -195,7 +196,7 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
             onClick={onCreditStore}
             size="lg"
             className={`bg-green-600 hover:bg-green-700 text-white transition-all duration-200 ${
-              focusedElement === 6 ? 'ring-4 ring-white/60 scale-105' : ''
+              focusedElement === 2 ? 'ring-4 ring-white/60 scale-105' : ''
             }`}
           >
             <Plus className="w-5 h-5 mr-2" />
@@ -206,7 +207,7 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
             size="lg"
             variant="outline"
             className={`bg-blue-600/20 border-blue-500/50 text-white hover:bg-blue-600/30 transition-all duration-200 ${
-              focusedElement === 7 ? 'ring-4 ring-white/60 scale-105' : ''
+              focusedElement === 3 ? 'ring-4 ring-white/60 scale-105' : ''
             }`}
           >
             <MessageCircle className="w-5 h-5 mr-2" />
@@ -220,7 +221,7 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
             <TabsTrigger 
               value="overview" 
               className={`text-white data-[state=active]:bg-brand-gold text-center transition-all duration-200 ${
-                focusedElement === 2 ? 'ring-4 ring-white/60 scale-105' : ''
+                focusedElement === 4 ? 'ring-4 ring-white/60 scale-105' : ''
               }`}
             >
               Overview
@@ -228,7 +229,7 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
             <TabsTrigger 
               value="credits" 
               className={`text-white data-[state=active]:bg-brand-gold text-center transition-all duration-200 ${
-                focusedElement === 3 ? 'ring-4 ring-white/60 scale-105' : ''
+                focusedElement === 5 ? 'ring-4 ring-white/60 scale-105' : ''
               }`}
             >
               App Credits
@@ -236,7 +237,7 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
             <TabsTrigger 
               value="store" 
               className={`text-white data-[state=active]:bg-brand-gold text-center transition-all duration-200 ${
-                focusedElement === 4 ? 'ring-4 ring-white/60 scale-105' : ''
+                focusedElement === 6 ? 'ring-4 ring-white/60 scale-105' : ''
               }`}
             >
               Store Account
@@ -244,7 +245,7 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
             <TabsTrigger 
               value="referrals" 
               className={`text-white data-[state=active]:bg-brand-gold text-center transition-all duration-200 ${
-                focusedElement === 5 ? 'ring-4 ring-white/60 scale-105' : ''
+                focusedElement === 7 ? 'ring-4 ring-white/60 scale-105' : ''
               }`}
             >
               Referrals
