@@ -5,6 +5,41 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Authentication helper
+async function authenticateUser(req: Request): Promise<{ userId: string | null; error: Response | null }> {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { 
+      userId: null, 
+      error: new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    };
+  }
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+  if (claimsError || !claimsData?.claims) {
+    console.error('Auth error:', claimsError);
+    return { 
+      userId: null, 
+      error: new Response(JSON.stringify({ error: 'Invalid token' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    };
+  }
+
+  return { userId: claimsData.claims.sub as string, error: null };
+}
+
 interface WixMember {
   id: string;
   loginEmail: string;
@@ -37,8 +72,14 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const { userId, error: authError } = await authenticateUser(req);
+    if (authError) {
+      return authError;
+    }
+
     console.log('=== WIX INTEGRATION FUNCTION START ===');
-    console.log('Wix integration function called');
+    console.log('Wix integration function called by user:', userId);
     
     const wixApiKey = Deno.env.get('WIX_API_KEY');
     const wixAccountId = Deno.env.get('WIX_ACCOUNT_ID');
