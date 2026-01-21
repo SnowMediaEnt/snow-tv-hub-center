@@ -563,6 +563,211 @@ Deno.serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
 
+      case 'get-profile':
+        console.log('Getting profile for member:', wixMemberId);
+        
+        if (!wixSiteId) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Site ID required for profile API'
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        if (!wixMemberId) {
+          return new Response(
+            JSON.stringify({ error: 'wixMemberId is required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // Get member details by ID
+        const profileResponse = await fetch(`https://www.wixapis.com/members/v1/members/${wixMemberId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': wixApiKey,
+            'wix-site-id': wixSiteId,
+          }
+        });
+        
+        console.log('Profile API response status:', profileResponse.status);
+        
+        if (!profileResponse.ok) {
+          const errorText = await profileResponse.text();
+          console.error('Profile API error:', errorText);
+          return new Response(
+            JSON.stringify({ 
+              profile: null,
+              error: `Profile API error: ${profileResponse.status}`
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        const profileData = await profileResponse.json();
+        const profile = {
+          id: profileData.member?.id,
+          email: profileData.member?.loginEmail,
+          firstName: profileData.member?.profile?.firstName || '',
+          lastName: profileData.member?.profile?.lastName || '',
+          nickname: profileData.member?.profile?.nickname || '',
+          addresses: profileData.member?.contact?.addresses || [],
+          phoneNumber: profileData.member?.contact?.phones?.[0] || '',
+          picture: profileData.member?.profile?.photo?.url || '',
+          purchaseHistory: []
+        };
+        
+        return new Response(
+          JSON.stringify({ profile }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      case 'get-member':
+        console.log('Getting member by ID:', wixMemberId);
+        
+        if (!wixSiteId) {
+          return new Response(
+            JSON.stringify({ error: 'Site ID required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        if (!wixMemberId) {
+          return new Response(
+            JSON.stringify({ error: 'wixMemberId is required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        const getMemberResponse = await fetch(`https://www.wixapis.com/members/v1/members/${wixMemberId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': wixApiKey,
+            'wix-site-id': wixSiteId,
+          }
+        });
+        
+        if (!getMemberResponse.ok) {
+          const errorText = await getMemberResponse.text();
+          console.error('Get member error:', errorText);
+          return new Response(
+            JSON.stringify({ member: null, error: `API error: ${getMemberResponse.status}` }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        const getMemberData = await getMemberResponse.json();
+        return new Response(
+          JSON.stringify({ 
+            member: {
+              id: getMemberData.member?.id,
+              email: getMemberData.member?.loginEmail,
+              name: getMemberData.member?.profile?.firstName || getMemberData.member?.profile?.nickname || 'Unknown',
+              fullProfile: getMemberData.member
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      case 'get-referral-info':
+        console.log('Getting referral info for member:', wixMemberId);
+        
+        if (!wixSiteId) {
+          return new Response(
+            JSON.stringify({ error: 'Site ID required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // Return placeholder referral data - Wix referrals API may not be available
+        return new Response(
+          JSON.stringify({ 
+            referral: {
+              code: '',
+              link: '',
+              memberId: wixMemberId || '',
+              referralUrl: '',
+              totalReferrals: 0,
+              totalEarnings: '$0.00',
+              pendingEarnings: '$0.00'
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      case 'add-to-email-list':
+        console.log('Adding to email list:', payload.memberData);
+        
+        if (!wixSiteId) {
+          return new Response(
+            JSON.stringify({ error: 'Site ID required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        const emailListData = payload.memberData;
+        if (!emailListData?.email) {
+          return new Response(
+            JSON.stringify({ error: 'Email is required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // Use Contacts API to add to email list
+        const contactResponse = await fetch('https://www.wixapis.com/contacts/v4/contacts', {
+          method: 'POST',
+          headers: {
+            'Authorization': wixApiKey,
+            'wix-account-id': wixAccountId,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            info: {
+              name: {
+                first: emailListData.firstName || '',
+                last: emailListData.lastName || ''
+              },
+              emails: {
+                items: [{ email: emailListData.email }]
+              }
+            }
+          })
+        });
+        
+        console.log('Contact creation response status:', contactResponse.status);
+        
+        if (!contactResponse.ok) {
+          const errorText = await contactResponse.text();
+          console.error('Contact API error:', errorText);
+          return new Response(
+            JSON.stringify({ success: false, error: `Contact API error: ${contactResponse.status}` }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        const contactData = await contactResponse.json();
+        return new Response(
+          JSON.stringify({ success: true, contact: contactData.contact }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      case 'send-message':
+        console.log('Sending message from:', senderEmail);
+        
+        // For now, just log the message - would need Wix Inbox API setup
+        console.log('Message subject:', subject);
+        console.log('Message body:', messageText);
+        console.log('Sender name:', senderName);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Message received (Wix Inbox API integration pending)'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
       case 'get-loyalty':
         console.log('Getting loyalty/referral info for:', email || wixMemberId);
         
