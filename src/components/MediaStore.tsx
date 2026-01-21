@@ -104,16 +104,19 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
               setFocusedElement(categoryIds[0] || 'back');
             }
           } else if (focusedElement.startsWith('category-')) {
-            // Move from categories to header
-            setFocusedElement('back');
+            // Move from categories to signin/cart row (not directly to back)
+            setFocusedElement(user ? 'cart' : 'signin');
           } else if (focusedElement === 'signin' || focusedElement === 'cart') {
             setFocusedElement('back');
           }
           break;
           
         case 'ArrowDown':
-          if (headerItems.includes(focusedElement)) {
-            // Move from header to first category
+          if (focusedElement === 'back') {
+            // From back, go to signin/cart first (not categories)
+            setFocusedElement(user ? 'cart' : 'signin');
+          } else if (focusedElement === 'signin' || focusedElement === 'cart') {
+            // From signin/cart, go to categories
             if (categoryIds.length > 0) {
               setFocusedElement(categoryIds[0]);
             } else if (filteredProducts.length > 0) {
@@ -161,13 +164,11 @@ const MediaStore = ({ onBack }: MediaStoreProps) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [focusedElement, selectedProduct, onBack, navigate, user, products, selectedCategory, cart]);
 
-  // Scroll focused element into view for TV navigation
+  // Scroll focused element into view for TV navigation - works for ALL elements
   useEffect(() => {
-    if (focusedElement.startsWith('product-')) {
-      const el = document.querySelector(`[data-focus-id="${focusedElement}"]`);
-      if (el) {
-        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
+    const el = document.querySelector(`[data-focus-id="${focusedElement}"]`);
+    if (el) {
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }, [focusedElement]);
 

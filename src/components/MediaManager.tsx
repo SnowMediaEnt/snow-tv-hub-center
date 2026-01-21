@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,16 @@ interface MediaManagerProps {
   onBack: () => void;
 }
 
+// Focus element types for TV navigation
+type FocusElement = 
+  | 'back' 
+  | 'prompt-input' 
+  | 'generate-btn' 
+  | 'asset-type' 
+  | 'file-input' 
+  | `asset-toggle-${string}` 
+  | `asset-delete-${string}`;
+
 const MediaManager = ({ onBack }: MediaManagerProps) => {
   const { assets, loading, uploadAsset, toggleAssetActive, deleteAsset, getAssetUrl } = useMediaAssets();
   const { user } = useAuth();
@@ -32,6 +42,133 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
     section: 'home',
     description: ''
   });
+  const [focusedElement, setFocusedElement] = useState<FocusElement>('back');
+  
+  const promptInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper to get focus ring class
+  const getFocusClass = (id: FocusElement) => 
+    focusedElement === id ? 'ring-4 ring-brand-ice scale-105' : '';
+
+  // TV Navigation - D-pad support
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't intercept when typing in inputs
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        if (event.key === 'Escape' || (event.key === 'Backspace' && !(event.target as HTMLInputElement).value)) {
+          event.preventDefault();
+          setFocusedElement('prompt-input');
+          (event.target as HTMLElement).blur();
+        }
+        return;
+      }
+      
+      // Handle Android back button
+      if (event.key === 'Escape' || event.key === 'Backspace' || 
+          event.keyCode === 4 || event.which === 4) {
+        event.preventDefault();
+        onBack();
+        return;
+      }
+      
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key)) {
+        event.preventDefault();
+      }
+      
+      switch (event.key) {
+        case 'ArrowDown':
+          if (focusedElement === 'back') {
+            setFocusedElement('prompt-input');
+          } else if (focusedElement === 'prompt-input') {
+            setFocusedElement('asset-type');
+          } else if (focusedElement === 'generate-btn') {
+            setFocusedElement('asset-type');
+          } else if (focusedElement === 'asset-type') {
+            setFocusedElement('file-input');
+          } else if (focusedElement === 'file-input') {
+            if (assets.length > 0) {
+              setFocusedElement(`asset-toggle-${assets[0].id}`);
+            }
+          } else if (focusedElement.startsWith('asset-toggle-') || focusedElement.startsWith('asset-delete-')) {
+            const assetId = focusedElement.split('-').slice(2).join('-');
+            const assetIndex = assets.findIndex(a => a.id === assetId);
+            if (assetIndex < assets.length - 1) {
+              setFocusedElement(`asset-toggle-${assets[assetIndex + 1].id}`);
+            }
+          }
+          break;
+          
+        case 'ArrowUp':
+          if (focusedElement === 'prompt-input' || focusedElement === 'generate-btn') {
+            setFocusedElement('back');
+          } else if (focusedElement === 'asset-type') {
+            setFocusedElement('prompt-input');
+          } else if (focusedElement === 'file-input') {
+            setFocusedElement('asset-type');
+          } else if (focusedElement.startsWith('asset-toggle-') || focusedElement.startsWith('asset-delete-')) {
+            const assetId = focusedElement.split('-').slice(2).join('-');
+            const assetIndex = assets.findIndex(a => a.id === assetId);
+            if (assetIndex === 0) {
+              setFocusedElement('file-input');
+            } else {
+              setFocusedElement(`asset-toggle-${assets[assetIndex - 1].id}`);
+            }
+          }
+          break;
+          
+        case 'ArrowRight':
+          if (focusedElement === 'prompt-input') {
+            setFocusedElement('generate-btn');
+          } else if (focusedElement.startsWith('asset-toggle-')) {
+            const assetId = focusedElement.replace('asset-toggle-', '');
+            setFocusedElement(`asset-delete-${assetId}`);
+          }
+          break;
+          
+        case 'ArrowLeft':
+          if (focusedElement === 'generate-btn') {
+            setFocusedElement('prompt-input');
+          } else if (focusedElement.startsWith('asset-delete-')) {
+            const assetId = focusedElement.replace('asset-delete-', '');
+            setFocusedElement(`asset-toggle-${assetId}`);
+          }
+          break;
+          
+        case 'Enter':
+        case ' ':
+          if (focusedElement === 'back') {
+            onBack();
+          } else if (focusedElement === 'prompt-input') {
+            promptInputRef.current?.focus();
+          } else if (focusedElement === 'generate-btn') {
+            // Will trigger generate
+          } else if (focusedElement === 'file-input') {
+            fileInputRef.current?.click();
+          } else if (focusedElement.startsWith('asset-toggle-')) {
+            const assetId = focusedElement.replace('asset-toggle-', '');
+            const asset = assets.find(a => a.id === assetId);
+            if (asset) handleToggleActive(asset.id, asset.is_active);
+          } else if (focusedElement.startsWith('asset-delete-')) {
+            const assetId = focusedElement.replace('asset-delete-', '');
+            const asset = assets.find(a => a.id === assetId);
+            if (asset) handleDelete(asset.id, asset.file_path, asset.name);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusedElement, assets, onBack]);
+
+  // Scroll focused element into view
+  useEffect(() => {
+    const el = document.querySelector(`[data-focus-id="${focusedElement}"]`);
+    if (el) {
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [focusedElement]);
 
   // Detect screen resolution and optimal image size
   useEffect(() => {
@@ -300,7 +437,8 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
             onClick={onBack}
             variant="outline" 
             size="lg"
-            className="mr-6 bg-blue-600 border-blue-500 text-white hover:bg-blue-700"
+            data-focus-id="back"
+            className={`mr-6 bg-brand-gold text-brand-charcoal hover:bg-brand-gold/80 transition-all ${getFocusClass('back')}`}
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Back to Home
@@ -337,10 +475,11 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
               )}
             </div>
             <div className="flex gap-4">
-              <div className="flex-1">
+              <div className={`flex-1 transition-all ${getFocusClass('prompt-input')}`} data-focus-id="prompt-input">
                 <Label htmlFor="generate-prompt" className="text-white mb-2 block">Describe the background you want</Label>
                 <Input
                   id="generate-prompt"
+                  ref={promptInputRef}
                   value={generatePrompt}
                   onChange={(e) => setGeneratePrompt(e.target.value)}
                   placeholder="e.g., A serene mountain landscape at sunset with purple sky"
@@ -352,7 +491,8 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
                 <Button
                   onClick={handleGenerateImage}
                   disabled={generating || !generatePrompt.trim() || !user || (profile && profile.credits < (imageConfig.credits * 0.01))}
-                  className="bg-white/20 border-white/30 text-white hover:bg-white/30"
+                  data-focus-id="generate-btn"
+                  className={`bg-white/20 border-white/30 text-white hover:bg-white/30 transition-all ${getFocusClass('generate-btn')}`}
                 >
                   {generating ? (
                     <>
@@ -372,7 +512,7 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
         <Card className="bg-gradient-to-br from-blue-600 to-blue-800 border-blue-500 p-6 mb-8">
           <h2 className="text-2xl font-bold text-white mb-4">Upload New Asset</h2>
           <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-4">
-            <div>
+            <div data-focus-id="asset-type" className={`transition-all ${getFocusClass('asset-type')}`}>
               <Label htmlFor="asset-type" className="text-white mb-2 block">Asset Type</Label>
               <Select value={uploadForm.assetType} onValueChange={(value) => setUploadForm({...uploadForm, assetType: value as MediaAsset['asset_type']})}>
                 <SelectTrigger className="bg-white/10 border-white/20 text-white">
@@ -388,13 +528,14 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4" data-focus-id="file-input">
             <Input
               type="file"
+              ref={fileInputRef}
               accept=".jpg,.jpeg,.png,.gif,.svg,.webp,.bmp,.tiff"
               onChange={handleFileUpload}
               disabled={uploading}
-              className="bg-white/10 border-white/20 text-white file:bg-blue-600 file:text-white file:border-0 file:rounded file:px-4 file:py-2"
+              className={`bg-white/10 border-white/20 text-white file:bg-primary file:text-primary-foreground file:border-0 file:rounded file:px-4 file:py-2 transition-all ${getFocusClass('file-input')}`}
             />
             {uploading && <Loader2 className="w-5 h-5 animate-spin text-white" />}
           </div>
@@ -411,8 +552,8 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {groupAssets.map((asset) => (
-                    <Card key={asset.id} className={`bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 p-4 ${asset.is_active ? 'ring-2 ring-green-400' : ''}`}>
-                      <div className="aspect-video bg-slate-700 rounded mb-3 overflow-hidden">
+                    <Card key={asset.id} className={`bg-gradient-to-br from-muted to-background border-border p-4 ${asset.is_active ? 'ring-2 ring-green-500' : ''}`}>
+                      <div className="aspect-video bg-muted rounded mb-3 overflow-hidden">
                         <img 
                           src={getAssetUrl(asset.file_path)} 
                           alt={asset.name}
@@ -423,24 +564,28 @@ const MediaManager = ({ onBack }: MediaManagerProps) => {
                         />
                       </div>
                       
-                      <h4 className="text-lg font-bold text-white mb-2 truncate">{asset.name}</h4>
+                      <h4 className="text-lg font-bold text-foreground mb-2 truncate">{asset.name}</h4>
                       
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                        <div 
+                          data-focus-id={`asset-toggle-${asset.id}`}
+                          className={`flex items-center space-x-2 p-1 rounded transition-all ${getFocusClass(`asset-toggle-${asset.id}`)}`}
+                        >
                           <Switch
                             checked={asset.is_active}
                             onCheckedChange={() => handleToggleActive(asset.id, asset.is_active)}
                           />
-                          <span className="text-sm text-slate-400">
+                          <span className="text-sm text-muted-foreground">
                             {asset.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </div>
                         
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant="destructive"
+                          data-focus-id={`asset-delete-${asset.id}`}
                           onClick={() => handleDelete(asset.id, asset.file_path, asset.name)}
-                          className="bg-red-600 border-red-500 text-white hover:bg-red-700"
+                          className={`transition-all ${getFocusClass(`asset-delete-${asset.id}`)}`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

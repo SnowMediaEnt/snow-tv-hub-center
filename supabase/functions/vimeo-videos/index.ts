@@ -80,12 +80,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate user
-    const { userId, error: authError } = await authenticateUser(req);
-    if (authError) {
-      return authError;
-    }
-    console.log('Authenticated user:', userId);
+    // Support videos are public - no authentication required
+    // This allows basic support videos to be viewed without signing in
+    console.log('Vimeo videos function called - public access');
 
     // Get Vimeo credentials from Supabase secrets
     const vimeoToken = Deno.env.get('VIMEO_ACCESS_TOKEN');

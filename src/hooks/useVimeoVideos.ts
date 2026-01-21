@@ -22,18 +22,9 @@ export const useVimeoVideos = () => {
       setLoading(true);
       setError(null);
 
-      console.log('Fetching Vimeo videos...');
-      
-      // Get the current session to include auth token
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        console.log('No active session, user needs to sign in for Vimeo videos');
-        setError('Please sign in to view support videos');
-        setLoading(false);
-        return;
-      }
+      console.log('Fetching Vimeo videos (public access)...');
 
+      // Support videos are public - no auth required
       const { data, error: functionError } = await supabase.functions.invoke('vimeo-videos');
 
       if (functionError) {
