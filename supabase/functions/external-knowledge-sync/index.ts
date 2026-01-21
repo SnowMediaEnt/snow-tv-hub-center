@@ -25,9 +25,16 @@ serve(async (req) => {
     
     const { action, apiKey, ...data } = await req.json();
     
-    // Simple API key authentication (you should set this in Supabase secrets)
-    const expectedApiKey = Deno.env.get('EXTERNAL_KNOWLEDGE_API_KEY') || 'your-secret-api-key';
-    if (apiKey !== expectedApiKey) {
+    // API key authentication - requires proper secret configuration
+    const expectedApiKey = Deno.env.get('EXTERNAL_KNOWLEDGE_API_KEY');
+    if (!expectedApiKey) {
+      console.error('EXTERNAL_KNOWLEDGE_API_KEY is not configured');
+      return new Response(JSON.stringify({ error: 'API key not configured on server' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (!apiKey || apiKey !== expectedApiKey) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
