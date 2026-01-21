@@ -364,11 +364,11 @@ const Index = () => {
                 <span 
                   className="font-center"
                   style={{ 
-                    background: 'linear-gradient(180deg, #FFF8DC 0%, #FFD700 25%, #DAA520 50%, #B8860B 75%, #FFD700 100%)',
+                    background: 'linear-gradient(180deg, #E8D9A0 0%, #D4C078 30%, #C9B370 50%, #D4C078 70%, #E8D9A0 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
-                    filter: 'drop-shadow(0 2px 4px rgba(218, 165, 32, 0.5))'
+                    filter: 'drop-shadow(0 2px 3px rgba(180, 160, 100, 0.4))'
                   }}
                 >CENTER</span>
               </h1>
@@ -429,7 +429,13 @@ const Index = () => {
 
           {/* Main Content - Cards positioned at bottom */}
           <div className="relative z-10 flex-1 flex flex-col justify-end" style={{ paddingBottom: '5vh', paddingLeft: '5vw', paddingRight: '5vw' }}>
-            <div className={`flex justify-center w-full ${layoutMode === 'grid' ? 'flex-wrap' : ''}`} style={{ gap: 'clamp(1rem, 2vw, 3rem)' }}>
+            <div 
+              className={`justify-center w-full mx-auto ${layoutMode === 'grid' ? 'grid grid-cols-2' : 'flex'}`} 
+              style={{ 
+                gap: 'clamp(1rem, 2vw, 3rem)',
+                maxWidth: layoutMode === 'grid' ? 'clamp(450px, 50vw, 1100px)' : 'none'
+              }}
+            >
               {buttons.map((button, index) => {
                 const ButtonIcon = button.icon;
                 const isFocused = focusedButton === index;
