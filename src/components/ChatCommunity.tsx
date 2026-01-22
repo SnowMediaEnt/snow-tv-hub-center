@@ -710,7 +710,7 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
                   Create New Ticket
                 </Button>
               )}
-              {(selectedTicket || showNewTicketForm) && (
+              {showNewTicketForm && (
                 <Button 
                   onClick={() => { setSelectedTicket(null); setShowNewTicketForm(false); }}
                   variant="outline"
@@ -772,7 +772,7 @@ const ChatCommunity = ({ onBack, onNavigate }: ChatCommunityProps) => {
 
             {/* View Single Ticket */}
             {selectedTicket && (
-              <div className="flex flex-col h-[calc(100vh-280px)]">
+              <div className="flex flex-col h-[calc(100vh-200px)]">
                 {/* Header Row - Back, Subject, Status, Close all inline */}
                 <div className="flex items-center gap-3 mb-4">
                   <Button 
