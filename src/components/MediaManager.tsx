@@ -123,7 +123,12 @@ const MediaManager = ({ onBack, embedded = false, isActive = true }: MediaManage
           
         case 'ArrowUp':
           if (focusedElement === 'prompt-input' || focusedElement === 'generate-btn') {
-            if (!embedded) setFocusedElement('back');
+            if (embedded) {
+              // In embedded mode, exit back to parent (Settings tabs)
+              onBack();
+            } else {
+              setFocusedElement('back');
+            }
           } else if (focusedElement === 'asset-type') {
             setFocusedElement('prompt-input');
           } else if (focusedElement === 'file-input') {
