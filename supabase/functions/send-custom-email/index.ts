@@ -1,9 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { Resend } from 'npm:resend@4.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 interface TemplateEmailData {
   to: string
@@ -157,13 +160,12 @@ Deno.serve(async (req) => {
     const userId = claimsData.claims.sub;
     console.log('Authenticated user:', userId);
 
-    const gmailUser = Deno.env.get('GMAIL_USER') || 'support@snowmediaent.com';
-    const gmailPassword = Deno.env.get('GMAIL_APP_PASSWORD');
-
-    if (!gmailPassword) {
-      console.error('Gmail credentials not configured');
+    // Check if Resend API key is configured
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendApiKey) {
+      console.error('Resend API key not configured');
       return new Response(
-        JSON.stringify({ error: 'Gmail credentials not configured. Please set GMAIL_APP_PASSWORD.' }),
+        JSON.stringify({ error: 'Email service not configured. Please set RESEND_API_KEY.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -203,21 +205,37 @@ Deno.serve(async (req) => {
       );
     }
     
-    console.log('Sending email via Gmail SMTP...');
-    console.log('From:', gmailUser, `(${fromName})`);
+    console.log('Sending email via Resend...');
+    console.log('From:', `${fromName} <onboarding@resend.dev>`);
     console.log('To:', emailTo);
     console.log('Subject:', emailSubject);
     
-    // Actually send the email using Gmail SMTP
-    // For now, we'll return success - in production you'd configure SMTP properly
-    // The email sending is simulated since Gmail requires OAuth2 for programmatic access
+    // Send email using Resend
+    const { data: emailData, error: emailError } = await resend.emails.send({
+      from: `${fromName} <onboarding@resend.dev>`,
+      to: [emailTo],
+      subject: emailSubject,
+      html: emailHtml,
+    });
+
+    if (emailError) {
+      console.error('Resend error:', emailError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to send email',
+          message: emailError.message
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Email sent successfully:', emailData);
     
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Email queued for delivery',
-        from: gmailUser,
-        fromName,
+        message: 'Email sent successfully',
+        id: emailData?.id,
         to: emailTo,
         subject: emailSubject
       }),

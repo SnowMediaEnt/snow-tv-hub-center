@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, Store, Video, MessageCircle, Settings as SettingsIcon, User, LogIn, Download, Smartphone } from 'lucide-react';
+import { Package, Store, Video, MessageCircle, Settings as SettingsIcon, User, LogIn, Download, Smartphone, Shield } from 'lucide-react';
 import NewsTicker from '@/components/NewsTicker';
 import InstallApps from '@/components/InstallApps';
 import MediaStore from '@/components/MediaStore';
@@ -14,7 +14,9 @@ import UserDashboard from '@/components/UserDashboard';
 import WixConnectionTest from '@/components/WixConnectionTest';
 import SupportTicketSystem from '@/components/SupportTicketSystem';
 import AIConversationSystem from '@/components/AIConversationSystem';
+import AdminSupportDashboard from '@/components/AdminSupportDashboard';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { useVersion } from '@/hooks/useVersion';
 import { useNavigate } from 'react-router-dom';
 import { useNavigation } from '@/hooks/useNavigation';
@@ -30,6 +32,7 @@ const Index = () => {
   });
   const [screenHeight, setScreenHeight] = useState(window.innerHeight);
   const { user } = useAuth();
+  const { isAdmin } = useAdminRole();
   const { version } = useVersion();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -256,6 +259,9 @@ const Index = () => {
       {/* New AI Conversation System */}
       {currentView === 'ai-conversations' && <AIConversationSystem onBack={() => goBack()} />}
       {currentView === 'create-ai-conversation' && <AIConversationSystem onBack={() => goBack()} />}
+      
+      {/* Admin Support Dashboard */}
+      {currentView === 'admin-support' && <AdminSupportDashboard onBack={() => goBack()} />}
 
       {/* Home screen content */}
       {currentView === 'home' && (
@@ -284,6 +290,31 @@ const Index = () => {
             screenHeight >= 1440 ? 'top-6 right-6 gap-3' :
             'top-4 right-4 gap-2'
           }`}>
+            {/* Admin Button - only show for admins */}
+            {isAdmin && (
+              <Button
+                onClick={() => navigateTo('admin-support')}
+                variant="purple"
+                size={screenHeight >= 1440 ? "default" : "sm"}
+                tabIndex={0}
+                className={`tv-focusable transition-all duration-200 ${
+                  screenHeight >= 2160 ? 'text-xl px-6 py-3' :
+                  screenHeight >= 1440 ? 'text-lg px-5 py-2.5' :
+                  ''
+                } ${
+                  focusedButton === -3 
+                    ? 'ring-4 ring-white/60 shadow-2xl scale-105' 
+                    : ''
+                }`}
+              >
+                <Shield className={`mr-2 ${
+                  screenHeight >= 2160 ? 'w-6 h-6' :
+                  screenHeight >= 1440 ? 'w-5 h-5' :
+                  'w-4 h-4'
+                }`} />
+                Admin
+              </Button>
+            )}
             {user ? (
               <Button
                 onClick={() => navigateTo('user')}
