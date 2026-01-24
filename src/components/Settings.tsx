@@ -150,11 +150,14 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
   // Scroll focused element into view - ensure back button is always reachable
   useEffect(() => {
     if (focusedElement === 'back') {
-      // Force scroll to absolute top for back button
+      // Scroll to the absolute top anchor
+      const topAnchor = document.getElementById('settings-top');
+      if (topAnchor) {
+        topAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
       containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (focusedElement.startsWith('tab-')) {
-      // Tabs should also be near top
       const el = document.querySelector(`[data-settings-focus="${focusedElement}"]`);
       if (el) {
         el.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -177,8 +180,10 @@ const Settings = ({ onBack, layoutMode, onLayoutChange }: SettingsProps) => {
   };
 
   return (
-    <div ref={containerRef} className="tv-scroll-container tv-safe text-white">
+    <div ref={containerRef} className="tv-scroll-container tv-safe text-white" style={{ paddingTop: '2vh' }}>
       <div className="max-w-4xl mx-auto pb-16">
+        {/* Scroll anchor to ensure back button is reachable */}
+        <div id="settings-top" className="scroll-mt-4" />
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-start w-full">
             <Button 
