@@ -491,6 +491,12 @@ const MediaManager = ({ onBack, embedded = false, isActive = true }: MediaManage
         throw new Error(result.error || 'Generation failed');
       }
 
+      // Re-verify session before upload (session may have changed during generation)
+      const { data: { session: uploadSession } } = await supabase.auth.getSession();
+      if (!uploadSession?.user) {
+        throw new Error('Session expired during generation. Please sign in and try again.');
+      }
+
       // Convert base64 to blob
       const base64Response = await fetch(result.image);
       const blob = await base64Response.blob();
