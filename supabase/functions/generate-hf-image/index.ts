@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,14 +25,13 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
-    // Create client with user's auth token
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    // Create client with user's auth token in the header
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Verify the JWT and get user
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    // Verify the JWT by calling getUser() - it uses the Authorization header we set
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
       console.error('Auth error:', authError);
@@ -69,7 +68,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image-preview',
+        model: 'google/gemini-2.5-flash-image',
         messages: [
           {
             role: 'user',
