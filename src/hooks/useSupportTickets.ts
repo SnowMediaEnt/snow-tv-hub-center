@@ -325,9 +325,24 @@ export const useSupportTickets = (user: User | null) => {
     }
   };
 
+  // Re-fetch whenever the SESSION changes, not just on mount.
+  //
+  // This used to run once with an empty dependency list. That is exactly the
+  // wrong shape for this app, where the website session often arrives AFTER
+  // the screen does: the Player's reverse bridge signs the linked website
+  // account in a moment after a streaming sign-in, and Support itself now
+  // tries that bridge when it opens. Under the old code the first fetch ran
+  // with no auth.uid(), RLS returned nothing, and the list stayed empty until
+  // the component happened to remount — which read as "my tickets are gone".
   useEffect(() => {
-    fetchTickets();
-  }, []);
+    if (!user) {
+      setTickets([]);
+      setMessages({});
+      return;
+    }
+    void fetchTickets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   return {
     tickets,

@@ -265,8 +265,37 @@ export const useAIConversations = () => {
     }
   };
 
+  // Fetch on mount, and again whenever the signed-in USER changes. The hook
+  // takes no user argument (three call sites, none of which need to change),
+  // so it listens to auth directly. Same reason as useSupportTickets: the
+  // website session frequently lands after this screen mounts, and a one-shot
+  // fetch with no auth.uid() returns nothing under RLS.
+  //
+  // Keyed on the user id, not the event: supabase-js emits SIGNED_IN again on
+  // every return to the foreground and TOKEN_REFRESHED every hour, and the
+  // refetch here must not run on those — it would race an in-flight send and,
+  // because it shares `loading`, re-enable the Send button mid-request. So a
+  // same-user event is ignored, and the refetch that does run touches only
+  // the list, never `loading`.
   useEffect(() => {
-    fetchConversations();
+    void fetchConversations();
+    let lastUid: string | null | undefined;
+    const silentRefetch = async () => {
+      const { data, error } = await supabase
+        .from('ai_conversations')
+        .select('*')
+        .order('last_message_at', { ascending: false })
+        .limit(5);
+      if (!error) setConversations(data || []);
+    };
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const uid = session?.user?.id ?? null;
+      if (event === 'SIGNED_OUT') { lastUid = null; setConversations([]); setMessages({}); return; }
+      if (lastUid === undefined) { lastUid = uid; return; } // the mount fetch covers the initial session
+      if (uid && uid !== lastUid) { lastUid = uid; void silentRefetch(); }
+    });
+    return () => { data.subscription.unsubscribe(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

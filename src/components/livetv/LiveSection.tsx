@@ -18,6 +18,7 @@ import {
   type XtreamLiveStream,
   type EpgNowNext,
 } from '@/lib/xtream';
+import { prepareLocalForLine, reconcileFavoritesOnLoad, scheduleFavoritesPush, flushFavoritesPush } from '@/lib/favoritesSync';
 import { loadPlayerVolume, savePlayerVolume } from '@/utils/volume';
 import { isFireTV } from '@/utils/platform';
 import { trackEvent } from '@/lib/analytics';
@@ -97,6 +98,13 @@ const LiveSection = memo(({ creds, isActive, onExitLeft, onExitUp, onBack: _onBa
   const [searchQuery, setSearchQuery] = useState('');
 
   const [favorites, setFavorites] = useState<Map<number, FavChannel>>(() => loadFavoritesData());
+  // A list the cloud settled on (conflict merge, or another device's newer
+  // copy). Saved and shown, but NOT marked as a local change — it came from
+  // the server, so pushing it back would be a no-op at best.
+  const adoptFavorites = useCallback((m: Map<number, FavChannel>) => {
+    saveFavoritesData(m);
+    setFavorites(m);
+  }, []);
   const toggleFavorite = useCallback((ch: XtreamLiveStream | FavChannel) => {
     setFavorites(prev => {
       const n = new Map(prev);
@@ -110,9 +118,39 @@ const LiveSection = memo(({ creds, isActive, onExitLeft, onExitUp, onBack: _onBa
         epg_channel_id: (ch as XtreamLiveStream).epg_channel_id,
       });
       saveFavoritesData(n);
+      // Local first, cloud second: the list above is already saved, so a
+      // failed push loses nothing on this device. Debounced. If the push
+      // finds another device wrote first, the merged list comes back through
+      // adoptFavorites and replaces what we show.
+      scheduleFavoritesPush(creds, n, adoptFavorites);
       return n;
     });
-  }, []);
+  }, [creds, adoptFavorites]);
+
+  // Pull the cloud copy for this line once per sign-in and reconcile it with
+  // what this device has (favoritesSync.ts owns the rule). Keyed on the line,
+  // not on the creds object, so a re-render with an equal creds object does
+  // not re-pull. A pending push is flushed on unmount so a toggle made just
+  // before leaving the screen is not lost.
+  const favLine = `${creds.host}|${creds.username}`;
+  useEffect(() => {
+    let cancelled = false;
+    // FIRST, synchronously: make the local list this line's. If the user just
+    // switched accounts, the previous line's favourites are stashed and this
+    // line's come back (or an empty list) before any network call, so a toggle
+    // made from here on touches the right line.
+    const switched = prepareLocalForLine(creds, loadFavoritesData());
+    if (switched) adoptFavorites(switched);
+    // THEN the cloud. loadFavoritesData is passed as a GETTER so the local list
+    // is read after the pull resolves — a toggle made during the round-trip is
+    // merged, not overwritten.
+    void reconcileFavoritesOnLoad(creds, loadFavoritesData).then((next) => {
+      if (cancelled || !next) return;
+      adoptFavorites(next);
+    });
+    return () => { cancelled = true; flushFavoritesPush(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favLine]);
 
   const [volume, setVolume] = useState<number>(() => loadPlayerVolume());
   useEffect(() => { savePlayerVolume(volume); }, [volume]);

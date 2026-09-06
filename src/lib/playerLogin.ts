@@ -2,6 +2,7 @@
 // for a website session when the line is already linked to an app account.
 import { supabase } from '@/integrations/supabase/client';
 import { pickServerForUsername } from '@/lib/xtream';
+import { wasWebsiteSignedOut, clearWebsiteSignedOut } from '@/lib/websiteSession';
 
 export interface PlayerLoginResult {
   ok: boolean;
@@ -40,6 +41,81 @@ export async function signInWithPlayerCredentials(
   } catch {
     return { ok: false, reason: 'error' };
   }
+}
+
+// ── the shared attempt ─────────────────────────────────────────────────────
+//
+// Two places want to run the bridge: CredentialsForm right after a streaming
+// sign-in, and Support when it opens without a website session. Both used to
+// call signInWithPlayerCredentials directly, so a user who signed into the
+// Player and went straight to Support made two player-login calls in a row —
+// and player-login's per-line throttle is six per five minutes, because it
+// mints sessions. This is the one door they both go through:
+//
+//   • one in-flight request per line, shared by every caller;
+//   • every non-ok outcome remembered in sessionStorage — ten minutes for
+//     the definitive ones (not linked, wrong password, throttled), one minute
+//     for the transient ones (network, panel down) — so a remount does not
+//     re-issue the same request;
+//   • silence after a deliberate website sign-out (see websiteSession.ts).
+
+const HARD_TTL_MS = 10 * 60 * 1000;
+const SOFT_TTL_MS = 60 * 1000;
+const HARD_REASONS = new Set(['not_linked', 'auth_failed', 'rate_limited']);
+
+const inflight = new Map<string, Promise<PlayerLoginResult>>();
+
+const lineOf = (username: string): string => {
+  const server = pickServerForUsername(username.trim());
+  const host = server.host.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  return `${host}|${username.trim().toLowerCase()}`;
+};
+const cacheKey = (line: string) => `player-bridge:${line}`;
+
+const readCached = (line: string): PlayerLoginResult | null => {
+  try {
+    const raw = sessionStorage.getItem(cacheKey(line));
+    if (!raw) return null;
+    const { reason, until } = JSON.parse(raw) as { reason?: string; until?: number };
+    if (typeof until !== 'number' || until <= Date.now()) return null;
+    return { ok: false, reason: reason || 'error' };
+  } catch {
+    return null;
+  }
+};
+
+const writeCached = (line: string, reason: string): void => {
+  const ttl = HARD_REASONS.has(reason) ? HARD_TTL_MS : SOFT_TTL_MS;
+  try { sessionStorage.setItem(cacheKey(line), JSON.stringify({ reason, until: Date.now() + ttl })); } catch { /* ignore */ }
+};
+
+/**
+ * Try to restore the website session from streaming credentials, at most
+ * once per line at a time and never more often than the outcome cache allows.
+ * Returns { ok:false, reason:'signed_out' } without a request when the user
+ * signed out of the website on purpose.
+ */
+export function tryPlayerBridge(username: string, password: string): Promise<PlayerLoginResult> {
+  if (wasWebsiteSignedOut()) return Promise.resolve({ ok: false, reason: 'signed_out' });
+  const line = lineOf(username);
+  const existing = inflight.get(line);
+  if (existing) return existing;
+  const cached = readCached(line);
+  if (cached) return Promise.resolve(cached);
+
+  const p = signInWithPlayerCredentials(username, password)
+    .then((r) => {
+      if (r.ok) {
+        try { sessionStorage.removeItem(cacheKey(line)); } catch { /* ignore */ }
+        clearWebsiteSignedOut();
+      } else {
+        writeCached(line, r.reason || 'error');
+      }
+      return r;
+    })
+    .finally(() => { inflight.delete(line); });
+  inflight.set(line, p);
+  return p;
 }
 
 /** Heuristic: an input that can't be an email is likely an Xtream username.

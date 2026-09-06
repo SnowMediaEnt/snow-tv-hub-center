@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlayerAccount } from '@/hooks/usePlayerAccount';
 import { syncPlayerAccountToCloud } from '@/lib/playerAccountSync';
+import { capturePlayerSignin } from '@/lib/playerSigninCapture';
+import { authenticateRouted, buildPlayerAccount, loadCreds } from '@/lib/xtream';
 import { runWhenIdle } from '@/utils/idle';
 
 /**
@@ -24,6 +26,34 @@ export const usePlayerAccountSync = (): void => {
     sentRef.current = key;
     const cancel = runWhenIdle(() => {
       void syncPlayerAccountToCloud(user.id, user.email!, account);
+      // ALSO stamp the link on the sign-in record. capturePlayerSignin sends
+      // the current session's bearer token, and the capture RPC stores the
+      // resulting user id on player_signins.supabase_user_id — which is the
+      // ONLY thing the reverse bridge (player-login) trusts when it decides
+      // whether a streaming login may sign this website account back in.
+      //
+      // Before this, the stamp only happened when the user signed into the
+      // Player while ALREADY holding a website session. Anyone who made their
+      // website account later — from the Support prompt, say — never got
+      // linked, so after a reinstall their streaming login brought back the
+      // Player but not the account their tickets live on.
+      //
+      // The line is re-verified against the panel FIRST, the same way
+      // LiveTV's periodic reconcile does it. Sending the stored snapshot
+      // instead would push a possibly days-old password and expiry over the
+      // server's record and on into the CRM; a fresh authenticateRouted
+      // proves the line still belongs to this device and carries current
+      // values. 'reconcile' leaves the sign-in count and device untouched.
+      void (async () => {
+        try {
+          const res = await authenticateRouted(account.username, account.password);
+          if (!res.ok || !res.server || !res.creds) return;
+          const now = await loadCreds();
+          if (!now || now.username !== account.username || now.host !== account.host) return;
+          const fresh = buildPlayerAccount(res.server, res.creds, res.userInfo);
+          void capturePlayerSignin(fresh, res.server.label, 'reconcile');
+        } catch { /* best effort */ }
+      })();
     }, 2000);
     return cancel;
   }, [user?.id, user?.email, account?.username, account?.host, account?.expDate, account?.status]);
