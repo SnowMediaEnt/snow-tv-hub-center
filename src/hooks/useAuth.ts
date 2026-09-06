@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { waitForStorageReady } from '@/utils/storage';
 import { Capacitor } from '@capacitor/core';
 import { trackEvent } from '@/lib/analytics';
+import { markWebsiteSignedOut, clearWebsiteSignedOut } from '@/lib/websiteSession';
 
 const APP_CONFIRMATION_REDIRECT_URL = 'snowmedia://sso';
 
@@ -39,6 +40,9 @@ export const useAuth = () => {
       const { data } = supabase.auth.onAuthStateChange((event, session) => {
         if (!isMounted) return;
         console.log('[Auth] State change:', event);
+        // Any real sign-in lifts the "signed out on purpose" flag, so the
+        // player-login bridge is allowed to act again next time it is needed.
+        if (event === 'SIGNED_IN') clearWebsiteSignedOut();
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -148,6 +152,9 @@ export const useAuth = () => {
   const signOut = async () => {
     console.log('[Auth] Signing out');
     try { trackEvent('sign_out', 'auth'); } catch { void 0; }
+    // Deliberate. Without this, opening Support afterwards would sign the
+    // account straight back in from the stored streaming login.
+    markWebsiteSignedOut();
     const { error } = await supabase.auth.signOut();
     return { error };
   };

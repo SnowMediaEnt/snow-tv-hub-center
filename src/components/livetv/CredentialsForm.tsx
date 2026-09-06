@@ -19,7 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTVFocus, TVFocusNavigationMap } from '@/hooks/useTVFocus';
 import { syncPlayerAccountToCloud } from '@/lib/playerAccountSync';
 import { capturePlayerSignin } from '@/lib/playerSigninCapture';
-import { signInWithPlayerCredentials } from '@/lib/playerLogin';
+import { tryPlayerBridge } from '@/lib/playerLogin';
 import { trackEvent } from '@/lib/analytics';
 import { useToast } from '@/hooks/use-toast';
 
@@ -104,7 +104,7 @@ const CredentialsForm = memo(({ initial, onSaved, onCancel }: Props) => {
           // linked to one. The server re-verifies the creds against the panel
           // and, when linked, signs that account in — so the customer's email
           // account, orders and credits load without a second login.
-          void signInWithPlayerCredentials(result.creds.username, result.creds.password).then((r) => {
+          void tryPlayerBridge(result.creds.username, result.creds.password).then((r) => {
             if (r.ok) {
               toast({
                 title: 'Account loaded',

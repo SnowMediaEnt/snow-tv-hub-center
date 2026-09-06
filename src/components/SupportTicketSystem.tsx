@@ -18,6 +18,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 import { useAIConversations } from '@/hooks/useAIConversations';
 import { useAuth } from '@/hooks/useAuth';
+import { usePlayerAccount } from '@/hooks/usePlayerAccount';
+import { tryPlayerBridge } from '@/lib/playerLogin';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -46,9 +48,49 @@ const SupportTicketSystem = ({ onBack }: SupportTicketSystemProps) => {
   const [pendingAccountEmail, setPendingAccountEmail] = useState('');
 
 
-  const { user, signUp } = useAuth();
+  const { user, signUp, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { account: playerAccount, loading: playerLoading } = usePlayerAccount();
+
+  // NO WEBSITE SESSION BUT A PLAYER ACCOUNT: try the reverse bridge here too.
+  //
+  // Tickets live on the website account. After a reinstall most people sign
+  // back into the Player only — that card is the one focused by default — and
+  // the bridge that would restore the website session runs fire-and-forget at
+  // that moment. If it lost a race, hit the network at a bad time, or the link
+  // was only stamped later, this screen is where the user actually notices:
+  // "my tickets are gone". So it tries again here, and says what it is doing.
+  //
+  // tryPlayerBridge is shared with CredentialsForm: one in-flight request per
+  // line, every outcome cached, and nothing at all after a deliberate website
+  // sign-out — so this cannot double-fire, cannot hammer player-login's
+  // per-line throttle across remounts, and cannot undo a Sign Out.
+  const [bridging, setBridging] = useState(false);
+  const bridgeTriedRef = useRef(false);
+  useEffect(() => {
+    if (authLoading || playerLoading || user || bridgeTriedRef.current || isDemo()) return;
+    if (!playerAccount?.username || !playerAccount.password) return;
+    bridgeTriedRef.current = true;
+    let cancelled = false;
+    setBridging(true);
+    void tryPlayerBridge(playerAccount.username, playerAccount.password).then((r) => {
+      if (cancelled) return;
+      setBridging(false);
+      if (r.ok) {
+        toast({
+          title: 'Account restored',
+          description: r.emailMasked
+            ? `Signed into your Snow Media account (${r.emailMasked}). Your tickets are back.`
+            : 'Signed into your Snow Media account. Your tickets are back.',
+        });
+      }
+    });
+    // Reset here as well as in the resolver: if this effect is torn down while
+    // the request is in flight (the other bridge landed and `user` flipped),
+    // the resolver's cancelled-guard would otherwise leave `bridging` true.
+    return () => { cancelled = true; setBridging(false); };
+  }, [authLoading, playerLoading, user, playerAccount?.username, playerAccount?.password, playerAccount?.host, toast]);
 
 
 
@@ -944,7 +986,11 @@ const SupportTicketSystem = ({ onBack }: SupportTicketSystemProps) => {
               <p className="text-slate-500 mb-4">
                 {user
                   ? "You haven't created any support tickets yet."
-                  : "You can send a ticket without an account, but replies require signing in."}
+                  : bridging
+                    ? 'Checking for your Snow Media account…'
+                    : playerAccount
+                      ? 'Your tickets are on your Snow Media website account, not your streaming login. Sign in to it to see them.'
+                      : "You can send a ticket without an account, but replies require signing in."}
               </p>
               <div className="flex items-center justify-center gap-2 flex-wrap">
                 {!isDemo() && (
