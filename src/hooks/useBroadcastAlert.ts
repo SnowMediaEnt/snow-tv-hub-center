@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { runWhenIdle, onFirstInteraction } from '@/utils/idle';
+import { setPausableInterval } from '@/utils/pausableInterval';
 
 const DISMISS_KEY = 'snow-broadcast-alert-dismissed-v1';
 
@@ -60,7 +61,21 @@ export function useBroadcastAlert() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_alerts' }, () => fetchRows())
         .subscribe();
     });
-    return () => { cancelIdle(); cancelFirst(); if (channel) supabase.removeChannel(channel); };
+    // POLL AS WELL. Until now a running TV only learned about a new broadcast
+    // through the realtime channel above — which is only opened after the
+    // first remote press, and depends on app_alerts being in the realtime
+    // publication, which nothing verifies. An admin who created an alert and
+    // watched a TV that was already on saw nothing until that TV restarted.
+    // Same 60s safety net useAppAlerts already has, paused while backgrounded,
+    // plus a refetch on return to the foreground.
+    const cancelInterval = setPausableInterval(fetchRows, 60_000);
+    const onVisible = () => { if (document.visibilityState === 'visible') void fetchRows(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelIdle(); cancelFirst(); cancelInterval();
+      document.removeEventListener('visibilitychange', onVisible);
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [fetchRows]);
 
   const alert = useMemo<BroadcastAlert | null>(() => {
