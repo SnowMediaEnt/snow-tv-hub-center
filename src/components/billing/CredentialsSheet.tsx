@@ -1,0 +1,124 @@
+import { memo, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Copy, Eye, EyeOff, KeyRound, Calendar, Server, Loader2, CheckCircle2 } from 'lucide-react';
+import { useTVFocus } from '@/hooks/useTVFocus';
+import { useToast } from '@/hooks/use-toast';
+import type { BillingService } from '@/capacitor/SmcBilling';
+import { copyText, formatDateTime } from '@/lib/billing';
+import { BTN, BTN_GOLD, CARD, SCREEN, focusAttrs, scaleIf, useFocusRecovery } from './shared';
+import { Spinner } from './SharedUi';
+
+interface Props {
+  title: string;
+  subtitle?: string;
+  note?: string | null;
+  service: BillingService;
+  primaryLabel: string;
+  onPrimary: () => void;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
+  busy?: boolean;
+  busyLabel?: string;
+}
+
+/**
+ * The "here are your login details" sheet shown after a trial is created or a
+ * bought line goes active: username, password, expiry, Copy buttons, and the
+ * call to action that signs the player in.
+ */
+const CredentialsSheet = memo(({ title, subtitle, note, service, primaryLabel, onPrimary, secondaryLabel, onSecondary, busy, busyLabel }: Props) => {
+  const { toast } = useToast();
+  const [showPwd, setShowPwd] = useState(false);
+  const c = service.credentials;
+
+  const { containerRef, currentFocusId, focusById } = useTVFocus({
+    initialFocusId: 'cs-primary',
+    onBack: () => { if (busy) return; (onSecondary ?? onPrimary)(); },
+    scrollBlock: 'center',
+  });
+  useFocusRecovery(containerRef, currentFocusId, focusById, 'cs-primary');
+
+  const copy = async (label: string, value: string) => {
+    const ok = await copyText(value);
+    toast(ok
+      ? { title: 'Copied', description: `${label} copied to the clipboard.` }
+      : { title: 'Copy not available', description: 'Write it down from the screen instead.', variant: 'destructive' });
+  };
+
+  const rows = c ? [
+    { id: 'user', label: 'Username', icon: KeyRound, value: c.username, copy: c.username },
+    { id: 'pass', label: 'Password', icon: KeyRound, value: showPwd ? c.password : '•'.repeat(Math.max(8, c.password.length)), copy: c.password },
+    { id: 'host', label: 'Server', icon: Server, value: c.host, copy: c.host },
+  ] : [];
+
+  return (
+    <div ref={containerRef} className={SCREEN}>
+      <div className="flex-1 flex items-center justify-center p-6">
+        <Card className={`${CARD} w-full max-w-3xl p-8`}>
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-9 h-9 text-emerald-400 shrink-0" />
+            <div>
+              <h2 className="text-2xl font-quicksand font-bold text-white">{title}</h2>
+              {subtitle && <p className="text-brand-ice/80 font-nunito">{subtitle}</p>}
+            </div>
+          </div>
+
+          {note && (
+            <p className="mt-4 rounded-xl bg-amber-500/15 border border-amber-400/40 px-4 py-3 text-amber-100 text-sm font-nunito">{note}</p>
+          )}
+
+          <div className="mt-6 space-y-3">
+            {rows.map((r) => {
+              const Icon = r.icon;
+              return (
+                <div key={r.id} className="flex items-center gap-3 rounded-xl bg-black/30 border border-white/10 px-4 py-3">
+                  <Icon className="w-5 h-5 text-brand-ice shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs uppercase tracking-wide text-white/60">{r.label}</div>
+                    <div className="text-lg text-white font-medium font-mono break-all">{r.value}</div>
+                  </div>
+                  {r.id === 'pass' && (
+                    <Button variant="white" size="sm" onClick={() => setShowPwd((v) => !v)}
+                      className={`${BTN} h-10 ${scaleIf(currentFocusId, 'cs-show')}`} {...focusAttrs(currentFocusId, 'cs-show')}>
+                      {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  )}
+                  <Button variant="white" size="sm" onClick={() => { void copy(r.label, r.copy); }}
+                    className={`${BTN} h-10 ${scaleIf(currentFocusId, `cs-copy-${r.id}`)}`} {...focusAttrs(currentFocusId, `cs-copy-${r.id}`)}>
+                    <Copy className="w-4 h-4 mr-1" /> Copy
+                  </Button>
+                </div>
+              );
+            })}
+            <div className="flex items-center gap-3 rounded-xl bg-black/30 border border-white/10 px-4 py-3">
+              <Calendar className="w-5 h-5 text-brand-ice shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="text-xs uppercase tracking-wide text-white/60">Expires</div>
+                <div className="text-lg text-white font-medium">{formatDateTime(service.expires_at)}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3 mt-8 items-center">
+            <Button variant="gold" disabled={busy} onClick={onPrimary}
+              className={`${BTN_GOLD} ${scaleIf(currentFocusId, 'cs-primary')}`} {...focusAttrs(currentFocusId, 'cs-primary')}>
+              {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {primaryLabel}
+            </Button>
+            {secondaryLabel && onSecondary && (
+              <Button variant="white" disabled={busy} onClick={onSecondary}
+                className={`${BTN} ${scaleIf(currentFocusId, 'cs-secondary')}`} {...focusAttrs(currentFocusId, 'cs-secondary')}>
+                {secondaryLabel}
+              </Button>
+            )}
+            {busy && busyLabel && <Spinner label={busyLabel} />}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+});
+
+CredentialsSheet.displayName = 'CredentialsSheet';
+export default CredentialsSheet;
