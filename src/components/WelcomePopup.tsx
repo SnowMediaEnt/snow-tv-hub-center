@@ -11,6 +11,15 @@ import { useVersion } from '@/hooks/useVersion';
  * Keep entries SHORT and user-facing — no internal/code talk.
  */
 const CHANGELOG: Record<string, string[]> = {
+  '1.7.1': [
+    '🚀 No streaming account yet? Create one right on the TV from the sign-in screen',
+    '🎁 Start a free 2-day trial with no card, or buy a plan — the Player signs you in when it is ready',
+    '👤 My Account: see what you have, renew it, redeem a gift code, or switch the Player to another service',
+    '📧 Your username and password are emailed to you after a trial or purchase, so you cannot lose them',
+    '📱 Vibez sign-up: pick a package on the TV, finish on your phone, then sign in and carry on',
+    '🕹️ Remote fixes on the new screens, and links no longer open a browser you did not ask for',
+    'Plex libraries open faster',
+  ],
   '1.7': [
     '🎬 New screen-format button in the player — switch between Wide, Fill and Zoom so movies fill your TV properly',
     '🔔 Alerts now reach you even when SMC is closed, and you can turn them off in Settings',
