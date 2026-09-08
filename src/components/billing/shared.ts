@@ -86,11 +86,14 @@ export function useFocusRecovery(
   useEffect(() => {
     const root = containerRef.current;
     if (!root) return;
-    const has = (id: string | null) => !!id && !!root.querySelector(`[data-tv-focus-id="${id}"]:not([disabled])`);
+    // A disabled control is still THE control (a button busy with its own
+    // action); only one that left the DOM counts as gone.
+    const has = (id: string | null) => !!id && !!root.querySelector(`[data-tv-focus-id="${id}"]`);
+    const usable = (id: string) => !!root.querySelector(`[data-tv-focus-id="${id}"]:not([disabled])`);
     if (has(currentFocusId)) return;
     const raf = requestAnimationFrame(() => {
       if (has(currentFocusId)) return;
-      if (has(fallbackId)) { focusById(fallbackId); return; }
+      if (usable(fallbackId)) { focusById(fallbackId); return; }
       const first = root.querySelector<HTMLElement>('[data-tv-focus-id]:not([disabled])');
       if (first) focusById(first.dataset.tvFocusId);
     });

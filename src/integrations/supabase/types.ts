@@ -2051,6 +2051,54 @@ export type Database = {
         }
         Relationships: []
       }
+      signup_links: {
+        Row: {
+          active: boolean
+          connections: number | null
+          created_at: string
+          currency: string
+          id: string
+          kind: string
+          label: string | null
+          price: number | null
+          service: string
+          sort: number
+          term_months: number | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          connections?: number | null
+          created_at?: string
+          currency?: string
+          id: string
+          kind: string
+          label?: string | null
+          price?: number | null
+          service: string
+          sort?: number
+          term_months?: number | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          connections?: number | null
+          created_at?: string
+          currency?: string
+          id?: string
+          kind?: string
+          label?: string | null
+          price?: number | null
+          service?: string
+          sort?: number
+          term_months?: number | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       player_favorites: {
         Row: {
           favorites: Json

@@ -1,11 +1,12 @@
-import { memo, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Copy, Eye, EyeOff, KeyRound, Calendar, Server, Loader2, CheckCircle2 } from 'lucide-react';
+import { Copy, Eye, EyeOff, KeyRound, Calendar, Server, Loader2, CheckCircle2, Mail } from 'lucide-react';
 import { useTVFocus } from '@/hooks/useTVFocus';
 import { useToast } from '@/hooks/use-toast';
 import type { BillingService } from '@/capacitor/SmcBilling';
-import { copyText, formatDateTime } from '@/lib/billing';
+import { copyText, formatDateTime, serverLabelForHost } from '@/lib/billing';
+import { emailLineCredentials, wasLineEmailed } from '@/lib/lineEmail';
 import { BTN, BTN_GOLD, CARD, SCREEN, focusAttrs, scaleIf, useFocusRecovery } from './shared';
 import { Spinner } from './SharedUi';
 
@@ -20,6 +21,12 @@ interface Props {
   onSecondary?: () => void;
   busy?: boolean;
   busyLabel?: string;
+  /**
+   * The billing account's email. When given, the login is mailed there once,
+   * automatically — the billing API sends nothing itself, so without this the
+   * password exists only on this screen.
+   */
+  emailTo?: string | null;
 }
 
 /**
@@ -27,10 +34,41 @@ interface Props {
  * bought line goes active: username, password, expiry, Copy buttons, and the
  * call to action that signs the player in.
  */
-const CredentialsSheet = memo(({ title, subtitle, note, service, primaryLabel, onPrimary, secondaryLabel, onSecondary, busy, busyLabel }: Props) => {
+const CredentialsSheet = memo(({ title, subtitle, note, service, primaryLabel, onPrimary, secondaryLabel, onSecondary, busy, busyLabel, emailTo }: Props) => {
   const { toast } = useToast();
   const [showPwd, setShowPwd] = useState(false);
   const c = service.credentials;
+
+  // ── mail them a copy ───────────────────────────────────────────────────
+  // Fire-and-forget on purpose: the details are already on screen and already
+  // saved to the device, so a failed send must never stand between the viewer
+  // and watching. It reports, it does not block.
+  const [mail, setMail] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  const [mailNote, setMailNote] = useState<string | null>(null);
+  const autoSentRef = useRef(false);
+
+  const sendEmail = useCallback(async () => {
+    if (!c || !emailTo) return;
+    setMail('sending');
+    setMailNote(null);
+    const r = await emailLineCredentials({
+      email: emailTo,
+      creds: c,
+      serverLabel: serverLabelForHost(c.host),
+      planName: service.plan?.name ?? null,
+      expiresAt: service.expires_at ?? null,
+    });
+    if (r.ok) { setMail('sent'); return; }
+    setMail('failed');
+    setMailNote(r.message ?? null);
+  }, [c, emailTo, service.plan?.name, service.expires_at]);
+
+  useEffect(() => {
+    if (!c || !emailTo || autoSentRef.current) return;
+    autoSentRef.current = true;
+    if (wasLineEmailed(c)) { setMail('sent'); return; }
+    void sendEmail();
+  }, [c, emailTo, sendEmail]);
 
   const { containerRef, currentFocusId, focusById } = useTVFocus({
     initialFocusId: 'cs-primary',
@@ -99,6 +137,22 @@ const CredentialsSheet = memo(({ title, subtitle, note, service, primaryLabel, o
               </div>
             </div>
           </div>
+
+          {emailTo && (
+            <div className="mt-5 flex items-center gap-3 flex-wrap">
+              <Button variant="white" size="sm" disabled={busy || mail === 'sending'} onClick={() => { void sendEmail(); }}
+                className={`${BTN} h-11 ${scaleIf(currentFocusId, 'cs-email')}`} {...focusAttrs(currentFocusId, 'cs-email')}>
+                {mail === 'sending' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Mail className="w-4 h-4 mr-2" />}
+                {mail === 'sent' ? 'Send again' : 'Email me my login'}
+              </Button>
+              <span className="text-sm font-nunito text-brand-ice/80">
+                {mail === 'sent' && `Sent to ${emailTo}.`}
+                {mail === 'sending' && `Sending to ${emailTo}…`}
+                {mail === 'failed' && <span className="text-amber-200">{mailNote}</span>}
+                {mail === 'idle' && `We can send these to ${emailTo}.`}
+              </span>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-3 mt-8 items-center">
             <Button variant="gold" disabled={busy} onClick={onPrimary}

@@ -214,7 +214,7 @@ const PaymentSheet = memo(({ invoiceId, initialUrl, amount, currency, title, onP
               </div>
             ) : null}
             <div className="flex-1 min-w-0 space-y-3">
-              {phase === 'qr' && (
+              {qr && !done && (
                 <p className="text-white font-nunito">
                   Scan this with your phone to pay. This TV has no browser, so the payment page opens on the phone instead.
                 </p>

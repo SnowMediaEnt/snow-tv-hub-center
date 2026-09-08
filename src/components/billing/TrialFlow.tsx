@@ -40,6 +40,8 @@ const TrialFlow = memo(({ onDone, onCancel }: Props) => {
   const [service, setService] = useState<BillingService | null>(null);
   const [creds, setCreds] = useState<XtreamCreds | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  // The billing account's address, so the finished line can be mailed to them.
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [failure, setFailure] = useState<string>('');
   const [provisioningId, setProvisioningId] = useState<number | null>(null);
   const [pay, setPay] = useState<PayCtx | null>(null);
@@ -77,6 +79,7 @@ const TrialFlow = memo(({ onDone, onCancel }: Props) => {
         if (!st.signedIn) { setStep('auth'); return; }
         const me = await SmcBilling.me();
         if (cancelled) return;
+        setAccountEmail(me.client.email ?? null);
         setStep(me.client.trial_used ? 'used' : 'creating');
       } catch (e) {
         if (cancelled) return;
@@ -159,7 +162,7 @@ const TrialFlow = memo(({ onDone, onCancel }: Props) => {
       <BillingAuthForm
         initialMode="register"
         heading="Create a free billing account to start your 24-hour trial. This is separate from your streaming login."
-        onSuccess={(s) => setStep(s.client.trial_used ? 'used' : 'creating')}
+        onSuccess={(s) => { setAccountEmail(s.client.email ?? null); setStep(s.client.trial_used ? 'used' : 'creating'); }}
         onCancel={onCancel}
       />
     );
@@ -186,6 +189,7 @@ const TrialFlow = memo(({ onDone, onCancel }: Props) => {
         subtitle={trial ? `Watch for 24 hours — until ${formatDateTime(service.expires_at)}.` : `${service.plan?.name || 'Your plan'} is active.`}
         note={note}
         service={service}
+        emailTo={accountEmail}
         primaryLabel={creds ? 'Start watching' : 'Try again'}
         onPrimary={() => { if (creds) onDone(creds); else void applyAndShow(service); }}
         secondaryLabel={creds ? undefined : 'Close'}
