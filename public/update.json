@@ -1,9 +1,9 @@
 {
-  "version": "1.7",
-  "versionCode": 29,
-  "releaseDate": "2026-09-04",
+  "version": "1.7.1",
+  "versionCode": 30,
+  "releaseDate": "2026-09-08",
   "size": "",
-  "downloadUrl": "https://snowmediaapps.com/smc/snow_media_center_1.7.apk",
-  "changelog": "IMPORTANT — this update needs a one-time reinstall.\n\n1. Uninstall Snow Media Center\n2. Install it again from Downloader, code XXXXXX\n\nNothing is lost. Your account, your Plex login and your settings all come back when you sign in. This is a one-time security change — every update after this one installs normally.\n\nWHAT'S NEW\nScreen format button in the player — Wide, Fill and Zoom, so movies fill your TV properly.\nPlex now opens on Continue Watching, Recently Released and Recently Added instead of one long A-Z list.\nSort and filter your Plex movies and shows by genre, year, rating or unwatched, right from the top of the screen.\nAlerts reach you even when SMC is closed, and can be turned off in Settings.\nSend a screenshot or a short voice message with your support ticket.\nFresh Snow Media look across the app.\nLeft and right now work properly on the remote in Main Apps and Support.\nForgot-password link on the sign-in screen.",
-  "releaseNotes": "Version 1.7 needs a one-time uninstall and reinstall — after that, updates install normally again. It brings a screen-format control to the player, row-based Plex browsing with sort and filter, alerts that work with the app closed, screenshots and voice notes in tickets, and a batch of remote-control fixes."
+  "downloadUrl": "https://snowmediaapps.com/smc/snow_media_center_1.7.1.apk",
+  "changelog": "This one installs normally \u2014 no uninstall needed.\n\nWHAT'S NEW\nGet started without leaving the TV. No account yet? Create one on the sign-in screen, start a free 2-day trial with no card, or buy a plan \u2014 and the Player signs you in the moment it is ready.\nMy Account. See what you have, how long is left on it, renew it, redeem a gift code, or switch the Player to a different service.\nYour login, emailed to you. After a trial or a purchase your username and password are sent to your inbox, so losing the screen no longer means losing the account.\nVibez sign-up. Pick a package on the TV, finish on your phone, then sign in and carry on where you left off.\nRemote fixes on the new screens \u2014 you can get back to the trial card, the keyboard says what it is asking for, and links no longer open a browser you did not ask for.\nPlex libraries open faster.",
+  "releaseNotes": "Version 1.7.1 brings sign-up to the TV: create a DreamStreams account, take a free 2-day trial or buy a plan without leaving the app, and the Player signs itself in. Adds My Account with renewals and gift codes, emails you your login after a trial or purchase, and fixes a batch of remote-control issues on the new screens. Installs normally \u2014 no reinstall."
 }
