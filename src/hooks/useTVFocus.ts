@@ -77,6 +77,11 @@ export const useTVFocus = ({
   // instead would trap the viewer on the screen, since the field keeps focus
   // after the keyboard closes.
   const imeOpenRef = useRef(false);
+  // The element whose keyboard is open. focusById suppresses the IME on
+  // whatever it focuses — and every managed element's onFocus calls focusById,
+  // so opening the keyboard re-entered focusById and shut it again before it
+  // could appear. This is the one element it must leave alone.
+  const imeElRef = useRef<HTMLElement | null>(null);
   const [currentFocusId, setCurrentFocusId] = useState<string | null>(initialFocusId ?? null);
 
 
@@ -110,8 +115,9 @@ export const useTVFocus = ({
     });
     target.dataset.tvFocused = 'true';
     target.tabIndex = target.tabIndex < 0 ? 0 : target.tabIndex;
-    // Highlight only. Enter is what asks for the keyboard.
-    suppressIme(target);
+    // Highlight only. Enter is what asks for the keyboard — and the field it
+    // asked for keeps it.
+    if (target !== imeElRef.current) suppressIme(target);
     target.focus({ preventScroll: true });
     // When focusing a top-of-page "back" control, snap the nearest scroll
     // container to absolute top so the safe-area padding isn't clipped.
@@ -185,6 +191,7 @@ export const useTVFocus = ({
     if (isTextInput(currentEl)) {
       allowIme(currentEl);
       imeOpenRef.current = true;
+      imeElRef.current = currentEl;
       void focusTextInputForDpad(currentEl);
       return;
     }
@@ -233,6 +240,7 @@ export const useTVFocus = ({
       // first means the re-focus cannot raise it again.
       const closeIme = (el: HTMLElement | null) => {
         imeOpenRef.current = false;
+        imeElRef.current = null;
         suppressIme(el);
         void hideKeyboardForDpad(el).then(() => focusById(currentIdRef.current, 'nearest'));
       };
@@ -261,6 +269,7 @@ export const useTVFocus = ({
         event.stopPropagation();
         const from = active ?? target;
         imeOpenRef.current = false;
+        imeElRef.current = null;
         suppressIme(from);
         void hideKeyboardForDpad(from).then(() => {
           const before = currentIdRef.current;
@@ -270,6 +279,7 @@ export const useTVFocus = ({
           if (!isTextInput(landed)) return;
           allowIme(landed);
           imeOpenRef.current = true;
+          imeElRef.current = landed;
           void focusTextInputForDpad(landed);
         });
         return;
@@ -287,6 +297,7 @@ export const useTVFocus = ({
       // suppressed by focusById, so it cannot pop straight back up.
       if (typing && event.key.startsWith('Arrow')) {
         imeOpenRef.current = false;
+        imeElRef.current = null;
         suppressIme(active ?? target);
         void hideKeyboardForDpad(active ?? target);
       }
