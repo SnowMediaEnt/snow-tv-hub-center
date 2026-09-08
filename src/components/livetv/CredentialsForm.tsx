@@ -223,6 +223,9 @@ const CredentialsForm = memo(({ initial, onSaved, onCancel, onChildOpenChange }:
             <Input
               id="lt-user"
               data-tv-focus-id="cf-user"
+              placeholder="Username"
+              enterKeyHint="next"
+              aria-label="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="rounded-xl h-12 bg-black/30 text-white border-white/20"
@@ -237,6 +240,9 @@ const CredentialsForm = memo(({ initial, onSaved, onCancel, onChildOpenChange }:
               data-tv-focus-id="cf-pass"
               data-tv-allow-enter="true"
               type="password"
+              placeholder="Password"
+              enterKeyHint="done"
+              aria-label="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="rounded-xl h-12 bg-black/30 text-white border-white/20"

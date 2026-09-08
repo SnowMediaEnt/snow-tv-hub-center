@@ -1,6 +1,6 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Loader2, Tv, Smartphone, ArrowLeft } from 'lucide-react';
+import { Loader2, Tv, Smartphone, ArrowLeft, Sparkles, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTVFocus } from '@/hooks/useTVFocus';
 import type { XtreamCreds } from '@/lib/xtream';
@@ -26,7 +26,7 @@ interface Props {
   onCancel: () => void;
 }
 
-type Step = 'resolve' | 'choose' | 'dreamstreams' | 'plans' | 'handoff' | 'signin' | 'unavailable';
+type Step = 'resolve' | 'choose' | 'ds-choose' | 'dreamstreams' | 'plans' | 'handoff' | 'signin' | 'unavailable';
 
 const fallback = (
   <div className="min-h-screen flex items-center justify-center text-white bg-black/70">
@@ -61,6 +61,9 @@ const GetStartedFlow = memo(({ vibezEnabled, onDone, onCancel }: Props) => {
   // offering a service this device cannot actually complete.
   const [canChoose, setCanChoose] = useState(false);
   const [picked, setPicked] = useState<SignupLink | null>(null);
+  // Trial or buy, for DreamStreams. Vibez shows both on one screen; this is
+  // the same choice, asked before the account form rather than after it.
+  const [dsMode, setDsMode] = useState<'trial' | 'plans'>('trial');
   const [resumed, setResumed] = useState<VibezPending | null>(null);
   const resolvedRef = useRef(false);
 
@@ -84,7 +87,7 @@ const GetStartedFlow = memo(({ vibezEnabled, onDone, onCancel }: Props) => {
       // step that finishes the job.
       if (pending && haveVibez) { setResumed(pending); setStep('signin'); return; }
       if (ds && haveVibez) { setStep('choose'); return; }
-      if (ds) { setStep('dreamstreams'); return; }
+      if (ds) { setStep('ds-choose'); return; }
       if (haveVibez) { setStep('plans'); return; }
       setStep('unavailable');
     })();
@@ -107,10 +110,20 @@ const GetStartedFlow = memo(({ vibezEnabled, onDone, onCancel }: Props) => {
     );
   }
 
+  if (step === 'ds-choose') {
+    return (
+      <DsChooser
+        onTrial={() => { setDsMode('trial'); setStep('dreamstreams'); }}
+        onBuy={() => { setDsMode('plans'); setStep('dreamstreams'); }}
+        onBack={() => (canChoose ? setStep('choose') : onCancel())}
+      />
+    );
+  }
+
   if (step === 'dreamstreams') {
     return (
       <Suspense fallback={fallback}>
-        <TrialFlow onDone={onDone} onCancel={canChoose ? () => setStep('choose') : onCancel} />
+        <TrialFlow startAt={dsMode} onDone={onDone} onCancel={() => setStep('ds-choose')} />
       </Suspense>
     );
   }
@@ -143,11 +156,85 @@ const GetStartedFlow = memo(({ vibezEnabled, onDone, onCancel }: Props) => {
     );
   }
 
-  return <Chooser onDreamstreams={() => setStep('dreamstreams')} onVibez={() => setStep('plans')} onBack={onCancel} />;
+  return <Chooser onDreamstreams={() => setStep('ds-choose')} onVibez={() => setStep('plans')} onBack={onCancel} />;
 });
 
 GetStartedFlow.displayName = 'GetStartedFlow';
 export default GetStartedFlow;
+
+// ── trial or buy, for DreamStreams ──────────────────────────────────────────
+
+const DsChooser = memo(({ onTrial, onBuy, onBack }: {
+  onTrial: () => void; onBuy: () => void; onBack: () => void;
+}) => {
+  const { containerRef, currentFocusId, focusById } = useTVFocus({
+    initialFocusId: 'ds-trial',
+    onBack,
+    scrollBlock: 'center',
+  });
+  useFocusRecovery(containerRef, currentFocusId, focusById, 'ds-trial');
+
+  return (
+    <div ref={containerRef} className={SCREEN}>
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-4xl">
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-quicksand font-bold text-white">DreamStreams</h1>
+            <p className="text-brand-ice/80 font-nunito">Try it free first, or start a plan now.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Card
+              onClick={onTrial}
+              className={`${CARD} tv-ring cursor-pointer p-6 min-h-[11rem] transition-transform duration-150 ease-out ${scaleIf(currentFocusId, 'ds-trial')}`}
+              {...focusAttrs(currentFocusId, 'ds-trial')}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 rounded-xl bg-brand-gold/20 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-7 h-7 text-brand-gold" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-quicksand font-bold text-white leading-tight">Trial</h2>
+                  <p className="text-brand-gold font-nunito text-sm">24 hours · no card needed</p>
+                </div>
+              </div>
+              <p className="text-brand-ice/80 font-nunito text-sm leading-snug">
+                We create your login and sign the Player in straight away.
+              </p>
+            </Card>
+
+            <Card
+              onClick={onBuy}
+              className={`${CARD} tv-ring cursor-pointer p-6 min-h-[11rem] transition-transform duration-150 ease-out ${scaleIf(currentFocusId, 'ds-buy')}`}
+              {...focusAttrs(currentFocusId, 'ds-buy')}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 rounded-xl bg-sky-500/20 flex items-center justify-center shrink-0">
+                  <ShoppingCart className="w-7 h-7 text-sky-300" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-quicksand font-bold text-white leading-tight">Buy a plan</h2>
+                  <p className="text-sky-300 font-nunito text-sm">Pick a length and pay now</p>
+                </div>
+              </div>
+              <p className="text-brand-ice/80 font-nunito text-sm leading-snug">
+                Pay on this TV or with your phone, then the Player signs in by itself.
+              </p>
+            </Card>
+          </div>
+
+          <div className="flex justify-center mt-6">
+            <Button variant="white" onClick={onBack}
+              className={`${BTN} ${scaleIf(currentFocusId, 'ds-back')}`} {...focusAttrs(currentFocusId, 'ds-back')}>
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+DsChooser.displayName = 'DreamstreamsChooser';
 
 // ── the chooser ──────────────────────────────────────────────────────────────
 

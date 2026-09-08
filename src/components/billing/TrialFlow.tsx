@@ -18,6 +18,11 @@ interface Props {
   /** The player is signed in with the new line. */
   onDone: (creds: XtreamCreds) => void;
   onCancel: () => void;
+  /**
+   * Where to go once there is an account: straight into creating the free
+   * trial, or to the plan list to buy one. Defaults to the trial.
+   */
+  startAt?: 'trial' | 'plans';
 }
 
 type Step = 'check' | 'auth' | 'creating' | 'provisioning' | 'success' | 'used' | 'plans' | 'pay' | 'failed';
@@ -34,7 +39,7 @@ interface PayCtx { invoiceId: number; initialUrl: string | null; amount: number 
  * sheet and the wait for the line all run here too, so the viewer ends on the
  * same success sheet either way.
  */
-const TrialFlow = memo(({ onDone, onCancel }: Props) => {
+const TrialFlow = memo(({ onDone, onCancel, startAt = 'trial' }: Props) => {
   const { toast } = useToast();
   const [step, setStep] = useState<Step>('check');
   const [service, setService] = useState<BillingService | null>(null);
@@ -80,6 +85,7 @@ const TrialFlow = memo(({ onDone, onCancel }: Props) => {
         const me = await SmcBilling.me();
         if (cancelled) return;
         setAccountEmail(me.client.email ?? null);
+        if (startAt === 'plans') { setStep('plans'); return; }
         setStep(me.client.trial_used ? 'used' : 'creating');
       } catch (e) {
         if (cancelled) return;
@@ -89,7 +95,7 @@ const TrialFlow = memo(({ onDone, onCancel }: Props) => {
       }
     })();
     return () => { cancelled = true; };
-  }, [step, fail]);
+  }, [step, fail, startAt]);
 
   // 2. POST /trial.
   useEffect(() => {
@@ -162,7 +168,11 @@ const TrialFlow = memo(({ onDone, onCancel }: Props) => {
       <BillingAuthForm
         initialMode="register"
         heading="Create a free billing account to start your 24-hour trial. This is separate from your streaming login."
-        onSuccess={(s) => { setAccountEmail(s.client.email ?? null); setStep(s.client.trial_used ? 'used' : 'creating'); }}
+        onSuccess={(s) => {
+          setAccountEmail(s.client.email ?? null);
+          if (startAt === 'plans') { setStep('plans'); return; }
+          setStep(s.client.trial_used ? 'used' : 'creating');
+        }}
         onCancel={onCancel}
       />
     );
@@ -170,7 +180,18 @@ const TrialFlow = memo(({ onDone, onCancel }: Props) => {
   if (step === 'creating') return <WaitScreen title="Creating your free trial…" detail="The panel is creating your login. This takes a few seconds." />;
   if (step === 'provisioning') return <WaitScreen title="Setting up your line…" detail="Almost there. This usually takes a few seconds." />;
   if (step === 'failed') return <WaitScreen error title="That did not work" detail={failure} onBack={onCancel} />;
-  if (step === 'plans') return <BuyPlanScreen onBack={() => setStep('used')} onOrdered={onOrdered} onAuthLost={() => setStep('auth')} />;
+  if (step === 'plans') {
+    // Backing out of the plan list returns to whatever opened it: the "trial
+    // already used" notice when we arrived through the trial, or the caller
+    // when the viewer chose to buy from the start.
+    return (
+      <BuyPlanScreen
+        onBack={() => { if (startAt === 'plans') onCancel(); else setStep('used'); }}
+        onOrdered={onOrdered}
+        onAuthLost={() => setStep('auth')}
+      />
+    );
+  }
   if (step === 'pay' && pay) {
     return (
       <PaymentSheet
