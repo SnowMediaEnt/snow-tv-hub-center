@@ -47,9 +47,32 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
-const schemeFor = (host: string) => (host.includes(':443') || host.endsWith('.xyz') ? 'https' : 'http');
+// Ports a panel is commonly served over TLS on. dstreams is handed to us as
+// dstreams.xyz:2083 — asking that over plain http gets the gateway's HTML
+// error page, which is exactly what made a live line read as a wrong password.
+const TLS_PORTS = new Set(['443', '2053', '2083', '2087', '2096', '8443']);
 
-/** Strip scheme and trailing slashes so the panel URL builds cleanly. */
+/**
+ * Base URLs to try for a panel, best first.
+ *
+ * A scheme the caller supplied wins: the billing API returns a full
+ * credentials.host and knows better than any guess made here. Without one the
+ * port decides, and a host with no port at all is assumed to be TLS. The other
+ * scheme is kept as a fallback because getting this wrong is SILENT — the
+ * gateway answers with an HTML error page, not a redirect.
+ */
+function panelBases(rawHost: string): string[] {
+  const trimmed = rawHost.trim().replace(/\/+$/, '');
+  const m = /^(https?):\/\/(.+)$/i.exec(trimmed);
+  const bare = (m ? m[2] : trimmed).replace(/\/+$/, '');
+  const port = /:(\d+)$/.exec(bare)?.[1];
+  const first = m ? m[1].toLowerCase() : (port ? (TLS_PORTS.has(port) ? 'https' : 'http') : 'https');
+  const second = first === 'https' ? 'http' : 'https';
+  return [`${first}://${bare}`, `${second}://${bare}`];
+}
+
+
+/** Scheme-less form, used only as a throttle key so http/https share a bucket. */
 const bareHost = (h: string) => h.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
 
 // Deliberately conservative: this address is handed straight to the mail
@@ -119,34 +142,36 @@ const PANEL_AGENTS = [
 ];
 
 async function verifyLine(host: string, username: string, password: string): Promise<'ok' | 'auth_failed' | 'unreachable'> {
-  const url =
-    `${schemeFor(host)}://${host}/player_api.php?username=` +
+  const query =
+    `/player_api.php?username=` +
     encodeURIComponent(username) + `&password=` + encodeURIComponent(password);
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
   try {
-    for (const ua of PANEL_AGENTS) {
-      let text: string;
-      try {
-        const res = await fetch(url, {
-          signal: ctrl.signal,
-          headers: { 'User-Agent': ua, Accept: 'application/json' },
-        });
-        text = await res.text();
-      } catch {
-        return 'unreachable';
+    for (const base of panelBases(host)) {
+      for (const ua of PANEL_AGENTS) {
+        let text: string;
+        try {
+          const res = await fetch(base + query, {
+            signal: ctrl.signal,
+            headers: { 'User-Agent': ua, Accept: 'application/json' },
+          });
+          text = (await res.text()).trim();
+        } catch {
+          // Wrong scheme, or an agent the gateway refuses. Try the next pair.
+          continue;
+        }
+        // An HTML page is the gateway talking, never the panel answering.
+        if (!text.startsWith('{')) continue;
+        let data: unknown;
+        try { data = JSON.parse(text); } catch { continue; }
+        const ui = (data as { user_info?: Record<string, unknown> })?.user_info;
+        if (!ui) continue;
+        const auth = ui.auth;
+        return auth === 1 || auth === '1' || auth === true ? 'ok' : 'auth_failed';
       }
-      const trimmed = text.trim();
-      // An HTML page is the gateway talking, not the panel. Try the next agent.
-      if (!trimmed.startsWith('{')) continue;
-      let data: unknown;
-      try { data = JSON.parse(trimmed); } catch { continue; }
-      const ui = (data as { user_info?: Record<string, unknown> })?.user_info;
-      if (!ui) continue;
-      const auth = ui.auth;
-      return auth === 1 || auth === '1' || auth === true ? 'ok' : 'auth_failed';
     }
-    console.warn('[email-line-credentials] panel returned no JSON for any user agent — gateway block?');
+    console.warn('[email-line-credentials] no JSON from any scheme or agent — gateway block?');
     return 'unreachable';
   } finally {
     clearTimeout(timer);
@@ -199,7 +224,7 @@ Deno.serve(async (req) => {
   }
 
   const email = String(body.email ?? '').trim();
-  const host = bareHost(String(body.host ?? ''));
+  const host = String(body.host ?? '').trim().replace(/\/+$/, '');
   const username = String(body.username ?? '').trim();
   const password = String(body.password ?? '');
   const serverLabel = String(body.serverLabel ?? '').trim() || 'Snow Media';
@@ -225,7 +250,7 @@ Deno.serve(async (req) => {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
     const db = admin as unknown as ThrottleDb;
     const okIp = await throttle(db, ip ? `emailip:${ip}` : null, MAX_PER_IP);
-    const okLine = await throttle(db, `emailline:${host}|${username.toLowerCase()}`, MAX_PER_LINE);
+    const okLine = await throttle(db, `emailline:${bareHost(host)}|${username.toLowerCase()}`, MAX_PER_LINE);
     if (!okIp || !okLine) return json({ error: 'rate_limited' }, 429);
   }
 
