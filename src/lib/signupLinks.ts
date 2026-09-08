@@ -42,12 +42,15 @@ export const VIBEZ_HOST: string =
  * mode that would otherwise strand exactly the customer this feature is for.
  */
 const FALLBACK_BASE = 'https://superadminpanels.com/099451/auto/sites/zargoza';
+// The panel's per-package pages currently redirect to the site root, so every
+// tier points at the packages list. Prices are still per-row so the TV can
+// show them; only the destination is shared.
+const FALLBACK_URL = `${FALLBACK_BASE}/#packages`;
 const FALLBACK: SignupLink[] = [
-  { id: 'vibez-trial', service: VIBEZ, kind: 'trial', label: 'Free for 2 days', termMonths: null, connections: 5, price: 0, currency: 'USD', url: `${FALLBACK_BASE}/trial.php`, sort: 0 },
-  { id: 'vibez-register', service: VIBEZ, kind: 'register', label: null, termMonths: null, connections: null, price: null, currency: 'USD', url: `${FALLBACK_BASE}/register.php`, sort: 1 },
-  { id: 'vibez-1m-9c', service: VIBEZ, kind: 'plan', label: null, termMonths: 1, connections: 9, price: 35, currency: 'USD', url: `${FALLBACK_BASE}/onemonth3.php`, sort: 10 },
-  { id: 'vibez-3m-9c', service: VIBEZ, kind: 'plan', label: null, termMonths: 3, connections: 9, price: 100, currency: 'USD', url: `${FALLBACK_BASE}/threemonth3.php`, sort: 20 },
-  { id: 'vibez-12m-9c', service: VIBEZ, kind: 'plan', label: null, termMonths: 12, connections: 9, price: 375, currency: 'USD', url: `${FALLBACK_BASE}/twelvemonth3.php`, sort: 40 },
+  { id: 'vibez-trial', service: VIBEZ, kind: 'trial', label: '2 days', termMonths: null, connections: 5, price: 0, currency: 'USD', url: FALLBACK_URL, sort: 0 },
+  { id: 'vibez-1m-9c', service: VIBEZ, kind: 'plan', label: null, termMonths: 1, connections: 9, price: 35, currency: 'USD', url: FALLBACK_URL, sort: 10 },
+  { id: 'vibez-3m-9c', service: VIBEZ, kind: 'plan', label: null, termMonths: 3, connections: 9, price: 100, currency: 'USD', url: FALLBACK_URL, sort: 20 },
+  { id: 'vibez-12m-9c', service: VIBEZ, kind: 'plan', label: null, termMonths: 12, connections: 9, price: 375, currency: 'USD', url: FALLBACK_URL, sort: 40 },
 ];
 
 interface Row {

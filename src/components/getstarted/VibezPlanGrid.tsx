@@ -36,15 +36,31 @@ const VibezPlanGrid = memo(({ offers, onPick, onBack }: Props) => {
   // the card is wider than any grid cell, so nothing below scores it as the
   // best target upward. These few explicit links fix that; everything else
   // still falls through to spatial search.
+  // Every tier currently points at the same packages page, because the
+  // panel's per-package links redirect to the site root. A picker whose four
+  // choices all land in the same place is worse than one honest button, so
+  // when the destinations collapse, so does the screen — and it expands again
+  // by itself the moment those URLs differ, with no code change.
+  const shared = useMemo(() => {
+    const all = [...(offers.trial ? [offers.trial] : []), ...offers.plans];
+    const urls = new Set(all.map((l) => l.url));
+    return all.length > 1 && urls.size === 1 ? all[0] : null;
+  }, [offers]);
+
   const navigation = useMemo<TVFocusNavigationMap>(() => {
     const map: TVFocusNavigationMap = {};
+    if (shared) {
+      map['vp-go'] = { up: 'back' };
+      map.back = { down: 'vp-go' };
+      return map;
+    }
     const firstRow = offers.plans.slice(0, 3).map((p) => `vp-${p.id}`);
     const trialId = offers.trial ? 'vp-trial' : null;
     if (trialId) map[trialId] = { up: 'back', down: firstRow[0] };
     for (const id of firstRow) map[id] = { up: trialId ?? 'back' };
     map.back = { down: trialId ?? firstRow[0] };
     return map;
-  }, [offers]);
+  }, [offers, shared]);
 
   const { containerRef, currentFocusId, focusById } = useTVFocus({
     navigation,
@@ -56,11 +72,11 @@ const VibezPlanGrid = memo(({ offers, onPick, onBack }: Props) => {
 
   // Land on the first real offer rather than the Back button.
   useEffect(() => {
-    const first = offers.trial ? 'vp-trial' : offers.plans[0] ? `vp-${offers.plans[0].id}` : null;
+    const first = shared ? 'vp-go' : offers.trial ? 'vp-trial' : offers.plans[0] ? `vp-${offers.plans[0].id}` : null;
     if (!first) return;
     const t = window.setTimeout(() => focusById(first), 40);
     return () => window.clearTimeout(t);
-  }, [offers, focusById]);
+  }, [offers, shared, focusById]);
 
   return (
     <div ref={containerRef} className={SCREEN}>
@@ -78,7 +94,43 @@ const VibezPlanGrid = memo(({ offers, onPick, onBack }: Props) => {
 
       <div className={BODY}>
         <div className="w-full max-w-5xl space-y-6 pb-10">
-          {offers.trial && (
+          {shared ? (
+            <>
+              <Card
+                onClick={() => onPick({ ...shared, label: 'Vibez' })}
+                className={`tv-ring cursor-pointer rounded-2xl p-6 min-h-[7rem] bg-slate-900/70 border border-brand-gold/50 transition-transform duration-150 ease-out ${scaleIf(currentFocusId, 'vp-go')}`}
+                {...focusAttrs(currentFocusId, 'vp-go')}
+              >
+                <div className="flex items-center gap-3">
+                  <Smartphone className="w-7 h-7 text-brand-gold shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-xl font-quicksand font-bold text-white leading-tight">See plans and sign up</div>
+                    <div className="text-brand-ice/80 font-nunito text-sm">
+                      Scan with your phone, pick a package there, and pay. Then come back and enter the login they email you.
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                <div className="text-xs uppercase tracking-wide text-white/60 mb-3">What Vibez offers</div>
+                <ul className="space-y-2">
+                  {[...(offers.trial ? [offers.trial] : []), ...offers.plans].map((l) => (
+                    <li key={l.id} className="flex items-baseline justify-between gap-4 text-white font-nunito">
+                      <span className="min-w-0">
+                        {l.kind === 'trial' ? 'Trial' : (l.label ?? termText(l.termMonths) ?? 'Plan')}
+                        {l.connections ? <span className="text-brand-ice/60"> · {connectionsText(l.connections)}</span> : null}
+                        {l.kind === 'trial' && l.label ? <span className="text-brand-ice/60"> · {l.label}</span> : null}
+                      </span>
+                      <span className="shrink-0 font-quicksand font-bold text-brand-gold">{priceText(l) ?? ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          ) : null}
+
+          {!shared && offers.trial && (
             <Card
               onClick={() => onPick(offers.trial!)}
               className={`tv-ring cursor-pointer rounded-2xl p-6 min-h-[7rem] bg-slate-900/70 border border-brand-gold/50 transition-transform duration-150 ease-out ${scaleIf(currentFocusId, 'vp-trial')}`}
@@ -102,7 +154,7 @@ const VibezPlanGrid = memo(({ offers, onPick, onBack }: Props) => {
             </Card>
           )}
 
-          {offers.plans.length > 0 && (
+          {!shared && offers.plans.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {offers.plans.map((p) => {
                 const id = `vp-${p.id}`;

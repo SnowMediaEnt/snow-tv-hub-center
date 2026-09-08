@@ -29,6 +29,8 @@ export interface EmailLineOutcome {
 }
 
 const MESSAGES: Record<string, string> = {
+  not_deployed: 'Email is not switched on for this server yet. Your details are still on screen.',
+  auth_required: 'Email is not configured correctly on the server. Your details are still on screen.',
   invalid_email: 'That email address does not look right.',
   missing_credentials: 'This service has no login details yet.',
   invalid_credentials: 'The panel did not recognise this login, so nothing was sent.',
@@ -85,17 +87,36 @@ export async function emailLineCredentials(input: {
       },
     });
 
-    // functions.invoke reports a non-2xx as `error` and does not give us the
-    // body, so re-read the code from `data` when the function answered with
-    // one, and fall back to a generic failure when it did not.
-    const code = (data as { error?: string } | null)?.error;
-    if (error || code) {
-      const resolved = code || 'send_failed';
-      return { ok: false, code: resolved, message: friendly(resolved) };
+    if (!error) {
+      // A 2xx can still carry an error code in the body.
+      const code = (data as { error?: string } | null)?.error;
+      if (code) return { ok: false, code, message: friendly(code) };
+      markLineEmailed(input.creds);
+      return { ok: true };
     }
 
-    markLineEmailed(input.creds);
-    return { ok: true };
+    // functions.invoke collapses every non-2xx into one opaque error, which
+    // made a function that was never deployed look identical to a mail
+    // provider outage. The Response is on the error, so read the status and
+    // the body and say which it actually is — the two have completely
+    // different fixes and only one of them is ours.
+    const res = (error as { context?: Response }).context;
+    const status = res?.status;
+    if (status === 404) return { ok: false, code: 'not_deployed', message: friendly('not_deployed') };
+    // 401 here means the function is deployed with Verify JWT still on: a
+    // customer who signed up through billing has no Supabase session to send.
+    if (status === 401 || status === 403) return { ok: false, code: 'auth_required', message: friendly('auth_required') };
+
+    let bodyCode: string | null = null;
+    try {
+      const parsed = res ? await res.clone().json() : null;
+      const c = (parsed as { error?: unknown } | null)?.error;
+      if (typeof c === 'string') bodyCode = c;
+    } catch {
+      /* not JSON — fall back to the generic failure below */
+    }
+    const resolved = bodyCode || 'send_failed';
+    return { ok: false, code: resolved, message: friendly(resolved) };
   } catch {
     return { ok: false, code: 'send_failed', message: friendly('send_failed') };
   }
