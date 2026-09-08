@@ -102,7 +102,10 @@ const BillingAccountScreen = memo(({ onBack, onUseInPlayer, ownsHardwareBack }: 
       if (!mountedRef.current) return [];
       setClient(me.client);
       setServices(svc.services);
-      setView('services');
+      // Only the boot/sign-in path moves to the list. A refresh fired from the
+      // background (the pending-invoice poll) must not pull the viewer out of
+      // the plan list or a payment sheet they are in the middle of.
+      setView((v) => (v === 'loading' || v === 'auth' ? 'services' : v));
       return svc.services;
     } catch (e) {
       if (!mountedRef.current) return [];
@@ -110,7 +113,7 @@ const BillingAccountScreen = memo(({ onBack, onUseInPlayer, ownsHardwareBack }: 
       if (err.isAuthError) { onAuthLost(); return []; }
       if (err.code === 'rate_limited') block(err.retryAfter ?? 30);
       setLoadError(billingErrorText(err));
-      setView('services');
+      setView((v) => (v === 'loading' || v === 'auth' ? 'services' : v));
       return [];
     }
   }, [onAuthLost, block]);
@@ -194,7 +197,7 @@ const BillingAccountScreen = memo(({ onBack, onUseInPlayer, ownsHardwareBack }: 
       if (pend && (!s || pend.service_id === s.id)) {
         setPay({
           invoiceId: pend.invoice_id, initialUrl: null, amount: s?.amount ?? null, currency: s?.currency ?? 'USD',
-          title: `Pay for ${pend.plan_name || s?.plan?.name || 'your plan'}`, kind: 'order', serviceId: pend.service_id ?? s?.id ?? null, planName: pend.plan_name ?? s?.plan?.name ?? null,
+          title: `${pend.kind === 'renew' ? 'Renew' : 'Pay for'} ${pend.plan_name || s?.plan?.name || 'your plan'}`, kind: pend.kind, serviceId: pend.service_id ?? s?.id ?? null, planName: pend.plan_name ?? s?.plan?.name ?? null,
         });
         setView('pay');
         return;
@@ -293,10 +296,11 @@ const BillingAccountScreen = memo(({ onBack, onUseInPlayer, ownsHardwareBack }: 
     void SmcBilling.clearPendingInvoice().catch(() => undefined);
     if (!ctx) { setView('services'); void load(); return; }
     if (ctx.kind === 'renew') {
+      setPay(null);
+      setView('services');
       const list = await load();
       const svc = list.find((s) => s.id === ctx.serviceId);
       toast({ title: 'Renewed', description: svc?.next_due ? `Renewed until ${formatDate(svc.next_due)}.` : 'Your renewal is paid.' });
-      setPay(null);
       return;
     }
     setPay(null);

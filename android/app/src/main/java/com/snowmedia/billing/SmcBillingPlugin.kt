@@ -162,13 +162,13 @@ class SmcBillingPlugin : Plugin() {
 
     @PluginMethod
     fun service(call: PluginCall) {
-        val id = call.getLong("serviceId") ?: return reject(call, missing("serviceId"))
+        val id = call.num("serviceId") ?: return reject(call, missing("serviceId"))
         run(call) { JSObject().put("service", js(api.service(id).raw)) }
     }
 
     @PluginMethod
     fun renew(call: PluginCall) {
-        val id = call.getLong("serviceId") ?: return reject(call, missing("serviceId"))
+        val id = call.num("serviceId") ?: return reject(call, missing("serviceId"))
         run(call) {
             val r = api.renew(id)
             if (!r.paid) {
@@ -180,7 +180,7 @@ class SmcBillingPlugin : Plugin() {
 
     @PluginMethod
     fun order(call: PluginCall) {
-        val planId = call.getLong("planId") ?: return reject(call, missing("planId"))
+        val planId = call.num("planId") ?: return reject(call, missing("planId"))
         run(call) {
             val r = api.order(planId)
             val inv = r.invoiceId
@@ -195,14 +195,14 @@ class SmcBillingPlugin : Plugin() {
 
     @PluginMethod
     fun invoice(call: PluginCall) {
-        val id = call.getLong("invoiceId") ?: return reject(call, missing("invoiceId"))
+        val id = call.num("invoiceId") ?: return reject(call, missing("invoiceId"))
         run(call) { js(api.invoice(id).raw) }
     }
 
     /** Mints a fresh one-time pay_url. The web layer must open it at once and never keep it. */
     @PluginMethod
     fun payUrl(call: PluginCall) {
-        val id = call.getLong("invoiceId") ?: return reject(call, missing("invoiceId"))
+        val id = call.num("invoiceId") ?: return reject(call, missing("invoiceId"))
         run(call) { js(api.payUrl(id).raw) }
     }
 
@@ -235,7 +235,7 @@ class SmcBillingPlugin : Plugin() {
      */
     @PluginMethod
     fun pollInvoice(call: PluginCall) {
-        val id = call.getLong("invoiceId") ?: return reject(call, missing("invoiceId"))
+        val id = call.num("invoiceId") ?: return reject(call, missing("invoiceId"))
         val pollId = call.getString("pollId") ?: "invoice:$id"
         val ticket = newTicket(pollId)
         pollers.execute {
@@ -270,7 +270,7 @@ class SmcBillingPlugin : Plugin() {
      */
     @PluginMethod
     fun pollServiceActive(call: PluginCall) {
-        val id = call.getLong("serviceId") ?: return reject(call, missing("serviceId"))
+        val id = call.num("serviceId") ?: return reject(call, missing("serviceId"))
         val pollId = call.getString("pollId") ?: "service:$id"
         val ticket = newTicket(pollId)
         pollers.execute {
@@ -332,6 +332,14 @@ class SmcBillingPlugin : Plugin() {
             .put("service_id", serviceId ?: JSONObject.NULL)
             .put("plan_name", planName ?: JSONObject.NULL)
             .put("created_at", System.currentTimeMillis())
+
+    /**
+     * A numeric option from the web layer. The bridge parses the call with
+     * org.json, which hands back Integer for anything that fits in 32 bits,
+     * and PluginCall.getLong() only accepts a Long — so every WHMCS id came
+     * back null through it. Accept any Number.
+     */
+    private fun PluginCall.num(key: String): Long? = (data.opt(key) as? Number)?.toLong()
 
     private fun missing(field: String) =
         BillingError("validation_error", "$field is required.", 422, JSONObject().put("field", field))
