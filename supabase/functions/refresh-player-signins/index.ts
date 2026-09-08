@@ -177,6 +177,16 @@ function classifyExpiration(
   return null;
 }
 
+// Panels commonly sit behind an nginx rule that rejects anything that does not
+// look like a media player, answering 401 with an HTML page. Judged by status
+// alone that is indistinguishable from a wrong password, so a working line was
+// reported as bad credentials. Ask with agents a panel expects, and decide
+// from the BODY: only JSON carrying user_info can say a login is wrong.
+const PANEL_AGENTS = [
+  'Mozilla/5.0 (Linux; Android 9; AFTMM Build/PS7233; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/70.0.3538.110 Mobile Safari/537.36',
+  'VLC/3.0.20 LibVLC/3.0.20',
+];
+
 async function fetchPanel(row: Row): Promise<
   | { kind: 'ok'; userInfo: Record<string, unknown> }
   | { kind: 'auth_failed' }
@@ -195,25 +205,25 @@ async function fetchPanel(row: Row): Promise<
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: { 'User-Agent': 'SnowMediaHub/1.0 (+refresh-player-signins)' },
-    });
-    if (res.status === 401 || res.status === 403) return { kind: 'auth_failed' };
-    if (!res.ok) return { kind: 'unreachable' };
-    const text = await res.text();
-    let body: unknown;
-    try {
-      body = JSON.parse(text);
-    } catch {
-      // Some panels return an HTML error page for bad creds instead of JSON.
-      if (/login|auth|denied|invalid|forbidden/i.test(text)) return { kind: 'auth_failed' };
-      return { kind: 'bad_response' };
+    for (const ua of PANEL_AGENTS) {
+      const res = await fetch(url, {
+        signal: ctrl.signal,
+        headers: { 'User-Agent': ua, Accept: 'application/json' },
+      });
+      const text = (await res.text()).trim();
+      // Was: an HTML body matching /login|auth|denied|.../ counted as bad
+      // credentials. nginx's own "401 Authorization Required" page matches
+      // that, so a gateway block marked live lines as dead. An HTML page is
+      // never the panel answering — try the next agent instead.
+      if (!text.startsWith('{')) continue;
+      let body: unknown;
+      try { body = JSON.parse(text); } catch { continue; }
+      const info = (body as { user_info?: Record<string, unknown> } | null)?.user_info;
+      if (!info || typeof info !== 'object') continue;
+      if (!truthyAuth((info as Record<string, unknown>).auth)) return { kind: 'auth_failed' };
+      return { kind: 'ok', userInfo: info as Record<string, unknown> };
     }
-    const info = (body as { user_info?: Record<string, unknown> } | null)?.user_info;
-    if (!info || typeof info !== 'object') return { kind: 'bad_response' };
-    if (!truthyAuth((info as Record<string, unknown>).auth)) return { kind: 'auth_failed' };
-    return { kind: 'ok', userInfo: info as Record<string, unknown> };
+    return { kind: 'unreachable' };
   } catch (e) {
     const name = (e as { name?: string } | null)?.name ?? '';
     if (name === 'AbortError') return { kind: 'unreachable' };
