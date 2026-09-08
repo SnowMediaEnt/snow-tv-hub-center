@@ -23,6 +23,10 @@ interface Props {
  */
 const BuyPlanScreen = memo(({ onBack, onOrdered, onAuthLost }: Props) => {
   const [groups, setGroups] = useState<PlanGroup[] | null>(null);
+  // Why the list is empty matters: "the server sent none" and "it sent some
+  // but none can be ordered" are different problems with different fixes, and
+  // a bare "no plans available" hides both.
+  const [diagnosis, setDiagnosis] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ordering, setOrdering] = useState<number | null>(null);
   const { toast } = useToast();
@@ -40,7 +44,21 @@ const BuyPlanScreen = memo(({ onBack, onOrdered, onAuthLost }: Props) => {
     setLoadError(null);
     try {
       const r = await SmcBilling.plans();
-      const g = groupPlans(r.plans);
+      const all = r.plans ?? [];
+      const g = groupPlans(all);
+      const shown = g.reduce((n, grp) => n + grp.plans.length, 0);
+      if (shown === 0) {
+        const blocked = all.filter((p) => !p.trial && !p.orderable).length;
+        setDiagnosis(
+          all.length === 0
+            ? 'The billing server returned no plans at all.'
+            : blocked > 0
+              ? `${all.length} plan${all.length === 1 ? '' : 's'} came back, but ${blocked === 1 ? 'it is' : 'none are'} marked orderable, so ${blocked === 1 ? 'it cannot' : 'they cannot'} be bought from the app. Check the products in WHMCS.`
+              : 'The only plans available are trials, which cannot be bought.',
+        );
+      } else {
+        setDiagnosis(null);
+      }
       setGroups(g);
       return g;
     } catch (e) {
@@ -100,7 +118,10 @@ const BuyPlanScreen = memo(({ onBack, onOrdered, onAuthLost }: Props) => {
           {groups === null && <Spinner label="Loading plans…" />}
           {loadError && <p className="text-red-200 font-nunito">{loadError}</p>}
           {groups && groups.length === 0 && !loadError && (
-            <p className="text-brand-ice/80 font-nunito">No plans are available right now. Please try again later.</p>
+            <div className="space-y-2">
+              <p className="text-brand-ice/90 font-nunito">No plans are available right now.</p>
+              {diagnosis && <p className="text-brand-ice/60 font-nunito text-sm">{diagnosis}</p>}
+            </div>
           )}
           {groups?.map((g) => (
             <section key={g.term}>

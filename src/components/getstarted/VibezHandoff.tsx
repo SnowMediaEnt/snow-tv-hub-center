@@ -68,15 +68,15 @@ const VibezHandoff = memo(({ link, onHaveLogin, onBack }: Props) => {
     return () => { mountedRef.current = false; };
   }, []);
 
-  // Record the hand-off BEFORE opening anything: the Custom Tab backgrounds
-  // SMC, and a low-memory stick may kill the WebView outright. This marker is
-  // what lets the sign-in form offer "Finish setting up Vibez" afterwards.
+  // Record the hand-off, but do NOT launch a browser. Opening one on mount
+  // threw Fire TV viewers into Silk the instant they picked a package, over
+  // the top of the app and with no way back to the QR. The phone is the
+  // intended path; "Open on this TV" is there for anyone who wants it.
   useEffect(() => {
     if (openedRef.current) return;
     openedRef.current = true;
     writePending({ linkId: link.id, label: linkLabel(link), url: link.url });
-    void open();
-  }, [link, open]);
+  }, [link]);
 
   useEffect(() => {
     let cancelled = false;

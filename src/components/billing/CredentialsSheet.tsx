@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Copy, Eye, EyeOff, KeyRound, Calendar, Server, Loader2, CheckCircle2, Mail } from 'lucide-react';
+import { Copy, Eye, EyeOff, KeyRound, Calendar, Loader2, CheckCircle2, Mail } from 'lucide-react';
 import { useTVFocus } from '@/hooks/useTVFocus';
 import { useToast } from '@/hooks/use-toast';
 import type { BillingService } from '@/capacitor/SmcBilling';
@@ -87,7 +87,10 @@ const CredentialsSheet = memo(({ title, subtitle, note, service, primaryLabel, o
   const rows = c ? [
     { id: 'user', label: 'Username', icon: KeyRound, value: c.username, copy: c.username },
     { id: 'pass', label: 'Password', icon: KeyRound, value: showPwd ? c.password : '•'.repeat(Math.max(8, c.password.length)), copy: c.password },
-    { id: 'host', label: 'Server', icon: Server, value: c.host, copy: c.host },
+    // The server address is deliberately NOT shown. The app has already
+    // signed the Player in with it, so it is noise on a TV — nobody is going
+    // to type it. It stays in the email, where it is what someone needs to
+    // set the line up on another device.
   ] : [];
 
   return (

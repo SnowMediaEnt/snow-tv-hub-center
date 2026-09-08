@@ -1,13 +1,13 @@
-import { memo, useEffect } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Users, Sparkles, Smartphone } from 'lucide-react';
-import { useTVFocus } from '@/hooks/useTVFocus';
+import { useTVFocus, type TVFocusNavigationMap } from '@/hooks/useTVFocus';
 import { BackButton } from '@/components/ui/BackButton';
 import { BODY, HEADER, SCREEN } from '@/components/billing/shared';
 import { focusAttrs, scaleIf, useFocusRecovery } from '@/components/billing/shared';
 import { formatMoney } from '@/lib/billing';
 import type { SignupLink, SignupOffers } from '@/lib/signupLinks';
-import { connectionsText, linkLabel, termText } from '@/lib/signupLinks';
+import { connectionsText, termText } from '@/lib/signupLinks';
 
 interface Props {
   offers: SignupOffers;
@@ -31,7 +31,23 @@ const priceText = (l: SignupLink): string | null => {
  * since the hosted page is what actually charges.
  */
 const VibezPlanGrid = memo(({ offers, onPick, onBack }: Props) => {
+  // The trial sits in its own full-width card ABOVE the plan grid, so pure
+  // spatial navigation could walk down out of it and never find a way back —
+  // the card is wider than any grid cell, so nothing below scores it as the
+  // best target upward. These few explicit links fix that; everything else
+  // still falls through to spatial search.
+  const navigation = useMemo<TVFocusNavigationMap>(() => {
+    const map: TVFocusNavigationMap = {};
+    const firstRow = offers.plans.slice(0, 3).map((p) => `vp-${p.id}`);
+    const trialId = offers.trial ? 'vp-trial' : null;
+    if (trialId) map[trialId] = { up: 'back', down: firstRow[0] };
+    for (const id of firstRow) map[id] = { up: trialId ?? 'back' };
+    map.back = { down: trialId ?? firstRow[0] };
+    return map;
+  }, [offers]);
+
   const { containerRef, currentFocusId, focusById } = useTVFocus({
+    navigation,
     initialFocusId: 'back',
     onBack,
     scrollBlock: 'center',
@@ -72,9 +88,10 @@ const VibezPlanGrid = memo(({ offers, onPick, onBack }: Props) => {
                 <div className="flex items-center gap-3 min-w-0">
                   <Sparkles className="w-7 h-7 text-brand-gold shrink-0" />
                   <div className="min-w-0">
-                    <div className="text-xl font-quicksand font-bold text-white leading-tight">{linkLabel(offers.trial)}</div>
+                    <div className="text-xl font-quicksand font-bold text-white leading-tight">Trial</div>
                     <div className="text-brand-ice/80 font-nunito text-sm">
-                      Full access{offers.trial.connections ? ` on ${connectionsText(offers.trial.connections)}` : ''}. No card needed.
+                      {[offers.trial.label, 'no card needed'].filter(Boolean).join(' · ')}
+                      {offers.trial.connections ? ` · ${connectionsText(offers.trial.connections)}` : ''}
                     </div>
                   </div>
                 </div>
