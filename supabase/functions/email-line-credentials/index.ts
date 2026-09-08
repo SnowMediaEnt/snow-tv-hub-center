@@ -71,6 +71,34 @@ function panelBases(rawHost: string): string[] {
   return [`${first}://${bare}`, `${second}://${bare}`];
 }
 
+// A panel's admin UI and its player API are different doors on the same
+// machine. cPanel-style ports serve the login page and answer 404 for
+// player_api.php, so a host recorded from the panel address can never verify
+// a line no matter which scheme is used. When the host we are handed looks
+// like that, try the streaming ports on the same hostname before giving up.
+const PANEL_ONLY_PORTS = new Set(['2082', '2083', '2086', '2087']);
+const STREAM_FALLBACKS: Array<[string, string]> = [
+  ['http', '8080'], ['https', '2096'], ['http', '8000'], ['http', '25461'],
+];
+
+/** Every base worth trying for this host, best first, de-duplicated. */
+function candidateBases(rawHost: string): string[] {
+  const out: string[] = [];
+  const push = (b: string) => { if (!out.includes(b)) out.push(b); };
+  for (const b of panelBases(rawHost)) push(b);
+  const bare = rawHost.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  const name = bare.replace(/:\d+$/, '');
+  const port = /:(\d+)$/.exec(bare)?.[1] ?? '';
+  // Only ever the hostname we were already given — the port is the guess.
+  if (name && (!port || PANEL_ONLY_PORTS.has(port))) {
+    for (const [scheme, p] of STREAM_FALLBACKS) push(`${scheme}://${name}:${p}`);
+  }
+  return out;
+}
+
+/** Every attempt gets its own timeout; this caps the search as a whole. */
+const TOTAL_BUDGET_MS = 20000;
+
 
 /** Scheme-less form, used only as a throttle key so http/https share a bucket. */
 const bareHost = (h: string) => h.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
@@ -141,41 +169,71 @@ const PANEL_AGENTS = [
   'okhttp/4.12.0',
 ];
 
-async function verifyLine(host: string, username: string, password: string): Promise<'ok' | 'auth_failed' | 'unreachable'> {
+/**
+ * What to print in the email as the server address.
+ *
+ * The panel's own reply names the address it wants players to use, and that
+ * beats both the base we happened to reach it on and whatever host the caller
+ * passed in — a customer who types the panel's login URL into the Player gets
+ * nowhere.
+ */
+function displayHost(data: unknown, base: string): string {
+  const si = (data as { server_info?: Record<string, unknown> } | null)?.server_info;
+  const url = typeof si?.url === 'string' ? si.url.trim() : '';
+  const port = si?.port == null ? '' : String(si.port).trim();
+  if (url) return port && port !== '80' ? `${url}:${port}` : url;
+  return base.replace(/^https?:\/\//i, '');
+}
+
+/**
+ * Flat rather than a discriminated union: this project's edge functions are
+ * read alongside a `strict: false` app, and a flat shape needs no narrowing.
+ */
+interface Verdict {
+  kind: 'ok' | 'auth_failed' | 'unreachable';
+  /** Set when ok: the address the panel says players should use. */
+  host?: string;
+}
+
+async function verifyLine(host: string, username: string, password: string): Promise<Verdict> {
   const query =
     `/player_api.php?username=` +
     encodeURIComponent(username) + `&password=` + encodeURIComponent(password);
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    for (const base of panelBases(host)) {
-      for (const ua of PANEL_AGENTS) {
-        let text: string;
-        try {
-          const res = await fetch(base + query, {
-            signal: ctrl.signal,
-            headers: { 'User-Agent': ua, Accept: 'application/json' },
-          });
-          text = (await res.text()).trim();
-        } catch {
-          // Wrong scheme, or an agent the gateway refuses. Try the next pair.
-          continue;
-        }
-        // An HTML page is the gateway talking, never the panel answering.
-        if (!text.startsWith('{')) continue;
-        let data: unknown;
-        try { data = JSON.parse(text); } catch { continue; }
-        const ui = (data as { user_info?: Record<string, unknown> })?.user_info;
-        if (!ui) continue;
-        const auth = ui.auth;
-        return auth === 1 || auth === '1' || auth === true ? 'ok' : 'auth_failed';
+  const deadline = Date.now() + TOTAL_BUDGET_MS;
+  for (const base of candidateBases(host)) {
+    for (const ua of PANEL_AGENTS) {
+      if (Date.now() > deadline) break;
+      // One controller per attempt. A shared one stays aborted after the
+      // first timeout, so every later base failed instantly and the fallbacks
+      // were never really tried.
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+      let text: string;
+      try {
+        const res = await fetch(base + query, {
+          signal: ctrl.signal,
+          headers: { 'User-Agent': ua, Accept: 'application/json' },
+        });
+        text = (await res.text()).trim();
+      } catch {
+        // Wrong scheme, wrong port, or an agent the gateway refuses.
+        continue;
+      } finally {
+        clearTimeout(timer);
       }
+      // An HTML page is the gateway talking, never the panel answering.
+      if (!text.startsWith('{')) continue;
+      let data: unknown;
+      try { data = JSON.parse(text); } catch { continue; }
+      const ui = (data as { user_info?: Record<string, unknown> })?.user_info;
+      if (!ui) continue;
+      const auth = ui.auth;
+      if (!(auth === 1 || auth === '1' || auth === true)) return { kind: 'auth_failed' };
+      return { kind: 'ok', host: displayHost(data, base) };
     }
-    console.warn('[email-line-credentials] no JSON from any scheme or agent — gateway block?');
-    return 'unreachable';
-  } finally {
-    clearTimeout(timer);
   }
+  console.warn('[email-line-credentials] no JSON from any base or agent — wrong host, or a gateway block?');
+  return { kind: 'unreachable' };
 }
 
 function buildHtml(o: {
@@ -255,8 +313,10 @@ Deno.serve(async (req) => {
   }
 
   const verdict = await verifyLine(host, username, password);
-  if (verdict === 'auth_failed') return json({ error: 'invalid_credentials' }, 401);
-  if (verdict === 'unreachable') return json({ error: 'panel_unreachable' }, 502);
+  if (verdict.kind === 'auth_failed') return json({ error: 'invalid_credentials' }, 401);
+  if (verdict.kind === 'unreachable') return json({ error: 'panel_unreachable' }, 502);
+  // Print the address the panel gave us, not the one we were asked about.
+  const playerHost = verdict.host || host;
 
   try {
     const resend = new Resend(apiKey);
@@ -265,7 +325,7 @@ Deno.serve(async (req) => {
       to: [email],
       replyTo: REPLY_TO,
       subject: `Your ${serverLabel} login details`,
-      html: buildHtml({ username, password, host, serverLabel, planName, expiresAt }),
+      html: buildHtml({ username, password, host: playerHost, serverLabel, planName, expiresAt }),
     });
     if (error) {
       // Message only — never the address or the payload.

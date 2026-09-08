@@ -71,6 +71,34 @@ function panelBases(rawHost: string): string[] {
   return [`${first}://${bare}`, `${second}://${bare}`];
 }
 
+// A panel's admin UI and its player API are different doors on the same
+// machine. cPanel-style ports serve the login page and answer 404 for
+// player_api.php, so a host recorded from the panel address can never verify
+// a line no matter which scheme is used. When the host we are handed looks
+// like that, try the streaming ports on the same hostname before giving up.
+const PANEL_ONLY_PORTS = new Set(['2082', '2083', '2086', '2087']);
+const STREAM_FALLBACKS: Array<[string, string]> = [
+  ['http', '8080'], ['https', '2096'], ['http', '8000'], ['http', '25461'],
+];
+
+/** Every base worth trying for this host, best first, de-duplicated. */
+function candidateBases(rawHost: string): string[] {
+  const out: string[] = [];
+  const push = (b: string) => { if (!out.includes(b)) out.push(b); };
+  for (const b of panelBases(rawHost)) push(b);
+  const bare = rawHost.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  const name = bare.replace(/:\d+$/, '');
+  const port = /:(\d+)$/.exec(bare)?.[1] ?? '';
+  // Only ever the hostname we were already given — the port is the guess.
+  if (name && (!port || PANEL_ONLY_PORTS.has(port))) {
+    for (const [scheme, p] of STREAM_FALLBACKS) push(`${scheme}://${name}:${p}`);
+  }
+  return out;
+}
+
+/** Every attempt gets its own timeout; this caps the search as a whole. */
+const TOTAL_BUDGET_MS = 20000;
+
 
 const parseExpirationDate = (raw: unknown): string | null => {
   if (raw === null || raw === undefined || raw === '' || raw === 'null') return null;
@@ -234,38 +262,42 @@ async function fetchPanel(row: Row): Promise<
     encodeURIComponent(row.panel_username) +
     `&password=` +
     encodeURIComponent(row.panel_password);
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    for (const base of panelBases(host)) {
-      for (const ua of PANEL_AGENTS) {
-        let text: string;
-        try {
-          const res = await fetch(base + query, {
-            signal: ctrl.signal,
-            headers: { 'User-Agent': ua, Accept: 'application/json' },
-          });
-          text = (await res.text()).trim();
-        } catch {
-          // Wrong scheme, or an agent the gateway refuses. Try the next pair.
-          continue;
-        }
-        // An HTML page is the gateway talking, never the panel answering.
-        if (!text.startsWith('{')) continue;
-        let data: unknown;
-        try { data = JSON.parse(text); } catch { continue; }
-        const info = (data as { user_info?: Record<string, unknown> } | null)?.user_info;
-        if (!info || typeof info !== 'object') continue;
-        if (!truthyAuth((info as Record<string, unknown>).auth)) return { kind: 'auth_failed' };
-        return { kind: 'ok', userInfo: info as Record<string, unknown> };
+  const deadline = Date.now() + TOTAL_BUDGET_MS;
+  for (const base of candidateBases(host)) {
+    for (const ua of PANEL_AGENTS) {
+      if (Date.now() > deadline) break;
+      // One controller per attempt. A shared one stays aborted after the
+      // first timeout, so every later base failed instantly and the fallbacks
+      // were never really tried.
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+      let text: string;
+      try {
+        const res = await fetch(base + query, {
+          signal: ctrl.signal,
+          headers: { 'User-Agent': ua, Accept: 'application/json' },
+        });
+        text = (await res.text()).trim();
+      } catch {
+        // Wrong scheme, wrong port, or an agent the gateway refuses.
+        continue;
+      } finally {
+        clearTimeout(timer);
       }
+      // An HTML page is the gateway talking, never the panel answering.
+      if (!text.startsWith('{')) continue;
+      let data: unknown;
+      try { data = JSON.parse(text); } catch { continue; }
+      const info = (data as { user_info?: Record<string, unknown> } | null)?.user_info;
+      if (!info || typeof info !== 'object') continue;
+      if (!truthyAuth((info as Record<string, unknown>).auth)) return { kind: 'auth_failed' };
+      return { kind: 'ok', userInfo: info as Record<string, unknown> };
     }
-    console.warn('[refresh-player-signins] no JSON from any scheme or agent — gateway block?');
-    return { kind: 'unreachable' };
-  } finally {
-    clearTimeout(timer);
   }
+  console.warn('[refresh-player-signins] no JSON from any base or agent — wrong host, or a gateway block?');
+  return { kind: 'unreachable' };
 }
+
 
 // CRM linking + customer_services propagation live in the SECURITY DEFINER
 // public.link_player_signin_to_crm — ONE code path shared with
