@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, memo, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,19 +23,27 @@ import { tryPlayerBridge } from '@/lib/playerLogin';
 import { trackEvent } from '@/lib/analytics';
 import { useToast } from '@/hooks/use-toast';
 import { useBillingEnabled } from '@/hooks/useBillingEnabled';
-import { SmcBilling } from '@/capacitor/SmcBilling';
+import { useFeatureFlag } from '@/hooks/useFeatureFlag';
+import { isDemo } from '@/lib/demoMode';
+import { readPending } from '@/components/getstarted/pending';
 
-// The free-trial flow (billing account → POST /trial → sign the player in).
-// Loaded only when the viewer presses the button.
-const TrialFlow = lazy(() => import('@/components/billing/TrialFlow'));
+// Sign-up for someone with no account yet: DreamStreams end to end on the TV,
+// Vibez handed off to their site. Loaded only when the viewer presses it.
+const GetStartedFlow = lazy(() => import('@/components/getstarted/GetStartedFlow'));
 
 interface Props {
   initial?: Partial<XtreamCreds> | null;
   onSaved: (creds: XtreamCreds) => void;
   onCancel?: () => void;
+  /**
+   * Fires while a full-screen child (sign-up) is mounted. LiveTV and
+   * AccountChooser use it to stop their own Back handling, which would
+   * otherwise close the whole Player out from under the child.
+   */
+  onChildOpenChange?: (open: boolean) => void;
 }
 
-const CredentialsForm = memo(({ initial, onSaved, onCancel }: Props) => {
+const CredentialsForm = memo(({ initial, onSaved, onCancel, onChildOpenChange }: Props) => {
   const [username, setUsername] = useState(initial?.username || '');
   const [password, setPassword] = useState(initial?.password || '');
   const [testing, setTesting] = useState(false);
@@ -43,26 +51,21 @@ const CredentialsForm = memo(({ initial, onSaved, onCancel }: Props) => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // ── Free 24-hour trial (billing account) ───────────────────────────────
-  // Behind the billing_account flag and only in a build with the plugin.
-  // Hidden once the billing account says trial_used, per the API contract.
+  // ── Get started (no account yet) ───────────────────────────────────────
+  // DreamStreams needs the billing plugin and its app key; Vibez needs
+  // neither — it is a URL and a text field — so they are gated separately.
+  // The demo check lives HERE, not at the call sites: AccountChooser has no
+  // demo guard of its own, and a demo viewer must never reach a real checkout.
   const billingOn = useBillingEnabled();
-  const [trialOpen, setTrialOpen] = useState(false);
-  const [trialHidden, setTrialHidden] = useState(false);
-  const showTrial = billingOn && !trialHidden;
-  useEffect(() => {
-    if (!billingOn) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const st = await SmcBilling.getState();
-        if (cancelled || !st.signedIn) return;
-        const me = await SmcBilling.me();
-        if (!cancelled && me.client.trial_used) setTrialHidden(true);
-      } catch { /* unknown → keep the button; the flow itself handles trial_already_used */ }
-    })();
-    return () => { cancelled = true; };
-  }, [billingOn]);
+  const { enabled: vibezOn } = useFeatureFlag('vibez_signup', false);
+  const [childOpen, setChildOpen] = useState(false);
+  const showStart = !isDemo() && (billingOn || vibezOn);
+  // A hand-off recorded before the app was backgrounded (or killed) turns the
+  // button into a way back into the middle of that purchase.
+  const pending = showStart ? readPending() : null;
+
+  useEffect(() => { onChildOpenChange?.(childOpen); }, [childOpen, onChildOpenChange]);
+  useEffect(() => () => { onChildOpenChange?.(false); }, [onChildOpenChange]);
 
   // ── D-pad focus (TV remote) ────────────────────────────────────────────
   // This form must own its own D-pad navigation. Without it the WebView's
@@ -72,25 +75,31 @@ const CredentialsForm = memo(({ initial, onSaved, onCancel }: Props) => {
   const navigation = useMemo<TVFocusNavigationMap>(() => ({
     'cf-user':   { down: 'cf-pass' },
     'cf-pass':   { up: 'cf-user', down: 'cf-submit' },
-    'cf-submit': { up: 'cf-pass', right: hasCancel ? 'cf-cancel' : undefined, down: showTrial ? 'cf-trial' : undefined },
-    'cf-cancel': { up: 'cf-pass', left: 'cf-submit', down: showTrial ? 'cf-trial' : undefined },
-    'cf-trial':  { up: 'cf-submit', left: null, right: null, down: null },
-  }), [hasCancel, showTrial]);
+    'cf-submit': { up: 'cf-pass', right: hasCancel ? 'cf-cancel' : undefined, down: showStart ? 'cf-start' : undefined },
+    'cf-cancel': { up: 'cf-pass', left: 'cf-submit', down: showStart ? 'cf-start' : undefined },
+    // Only `up` is pinned. Left/right/down are left undefined so useTVFocus
+    // falls through to spatial search — a `null` here would swallow the key
+    // and make this button a dead end the viewer cannot leave sideways.
+    'cf-start':  { up: 'cf-submit' },
+  }), [hasCancel, showStart]);
 
   const { containerRef, focusById } = useTVFocus({
-    enabled: !trialOpen,
+    enabled: !childOpen,
     navigation,
     initialFocusId: 'cf-user',
     onBack: () => onCancel?.(),
     scrollBlock: 'center',
   });
-  // Coming back from the trial flow re-renders the form without re-running
-  // the hook's one-time auto-focus, so put the cursor back ourselves.
+  // Closing the child re-renders the form without re-running the hook's
+  // one-time auto-focus. Land back on the button that opened it rather than
+  // the username field, which on a TV would also raise the on-screen keyboard
+  // and read as the app resetting itself.
+  const openedFromRef = useRef<string>('cf-user');
   useEffect(() => {
-    if (trialOpen) return;
-    const raf = requestAnimationFrame(() => focusById('cf-user'));
+    if (childOpen) return;
+    const raf = requestAnimationFrame(() => focusById(openedFromRef.current));
     return () => cancelAnimationFrame(raf);
-  }, [trialOpen, focusById]);
+  }, [childOpen, focusById]);
 
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -174,16 +183,17 @@ const CredentialsForm = memo(({ initial, onSaved, onCancel }: Props) => {
     }
   };
 
-  if (trialOpen) {
+  if (childOpen) {
     return (
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-gold" /></div>}>
-        <TrialFlow
+        <GetStartedFlow
+          vibezEnabled={vibezOn}
           onDone={(c) => {
-            setTrialOpen(false);
-            toast({ title: 'Connected', description: `Signed in to ${c.serverLabel || 'Dreamstreams'}.` });
+            setChildOpen(false);
+            toast({ title: 'Connected', description: `Signed in to ${c.serverLabel || 'your service'}.` });
             onSaved(c);
           }}
-          onCancel={() => setTrialOpen(false)}
+          onCancel={() => setChildOpen(false)}
         />
       </Suspense>
     );
@@ -270,17 +280,17 @@ const CredentialsForm = memo(({ initial, onSaved, onCancel }: Props) => {
           )}
         </div>
 
-        {showTrial && (
+        {showStart && (
           <Button
             type="button"
             variant="white"
-            onClick={() => setTrialOpen(true)}
-            data-tv-focus-id="cf-trial"
+            onClick={() => { openedFromRef.current = 'cf-start'; setChildOpen(true); }}
+            data-tv-focus-id="cf-start"
             disabled={testing}
             className="w-full mt-3 rounded-xl h-12 transition-transform duration-150 ease-out"
           >
             <Sparkles className="w-4 h-4 mr-2 text-brand-gold" />
-            New here? Start a free 24-hour trial
+            {pending ? `Finish setting up ${pending.label}` : 'New here? Get started'}
           </Button>
         )}
 

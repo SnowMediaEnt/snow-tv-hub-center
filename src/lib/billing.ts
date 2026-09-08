@@ -194,6 +194,9 @@ const hostKey = (h: string) => h.trim().replace(/\/+$/, '').toLowerCase();
 const serverForHost = (host: string): XtreamServer =>
   SERVERS.find((s) => hostKey(s.host) === hostKey(host)) ?? { label: 'Dreamstreams', host: host.trim().replace(/\/+$/, '') };
 
+/** Which of our servers a service's host belongs to — for labels and emails. */
+export const serverLabelForHost = (host: string): string => serverForHost(host).label;
+
 export type ApplyResult = { ok: true; creds: XtreamCreds; probed: boolean } | { ok: false; error: string };
 
 /**
@@ -204,7 +207,11 @@ export type ApplyResult = { ok: true; creds: XtreamCreds; probed: boolean } | { 
  * that cannot reach the panel does not block the sign-in; the player will
  * re-check when it opens.
  */
-export async function applyServiceToPlayer(c: BillingCredentials): Promise<ApplyResult> {
+export async function applyServiceToPlayer(
+  c: BillingCredentials,
+  /** Which path signed them in, so Vibez hand-offs are distinguishable in analytics. */
+  via: string = 'billing',
+): Promise<ApplyResult> {
   const server = serverForHost(c.host);
   const creds = normalizeCreds({ host: server.host, username: c.username, password: c.password, output: 'm3u8', serverLabel: server.label });
   if (!creds.username || !creds.password) return { ok: false, error: 'This service has no login details yet.' };
@@ -240,7 +247,7 @@ export async function applyServiceToPlayer(c: BillingCredentials): Promise<Apply
   });
   void capturePlayerSignin(acc, server.label, 'signin');
   try {
-    trackEvent('livetv_signin', 'player', { server: server.label, username: acc.username, is_trial: acc.isTrial, days_left: daysUntilExp(acc), via: 'billing' });
+    trackEvent('livetv_signin', 'player', { server: server.label, username: acc.username, is_trial: acc.isTrial, days_left: daysUntilExp(acc), via });
   } catch { /* ignore */ }
   return { ok: true, creds, probed };
 }

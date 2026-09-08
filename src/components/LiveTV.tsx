@@ -378,6 +378,8 @@ const Player = memo(({ onBack, onNavigate }: Props) => {
   const sectionIdxRef = useRef(sectionIdx);
   const headerIdxRef = useRef(headerIdx);
   const showCredsFormRef = useRef(showCredsForm);
+  // Set by CredentialsForm while it is showing a full-screen child.
+  const credsChildOpenRef = useRef(false);
   useEffect(() => { paneRef.current = pane; }, [pane]);
   useEffect(() => { sectionIdxRef.current = sectionIdx; }, [sectionIdx]);
   useEffect(() => { headerIdxRef.current = headerIdx; }, [headerIdx]);
@@ -399,6 +401,10 @@ const Player = memo(({ onBack, onNavigate }: Props) => {
       // entirely — two actions from one press.
       if (expNoticeOpenRef.current) return;
       if (showCredsFormRef.current) {
+        // A full-screen sign-up child is mounted inside the form and owns its
+        // own Back. Without this, one press both closed the child AND called
+        // leaveMode(), dropping the viewer out of the Player mid-purchase.
+        if (credsChildOpenRef.current) return;
         if (e.defaultPrevented) return;
         const target = e.target as HTMLElement;
         const typing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
@@ -628,6 +634,7 @@ const Player = memo(({ onBack, onNavigate }: Props) => {
         <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-gold" /></div>}>
           <CredentialsForm
             initial={creds}
+            onChildOpenChange={(open) => { credsChildOpenRef.current = open; }}
             onSaved={(c) => {
               setCreds(c);
               setAccountFormOpen(false);

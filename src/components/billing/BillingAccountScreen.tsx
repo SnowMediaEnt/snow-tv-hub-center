@@ -379,6 +379,7 @@ const BillingAccountScreen = memo(({ onBack, onUseInPlayer, ownsHardwareBack }: 
         title="Your line is ready"
         subtitle={`${ready.plan?.name || 'Your plan'} · ${connectionsLabel(ready.connections)}`}
         service={ready}
+        emailTo={client?.email ?? null}
         primaryLabel="Use in player"
         onPrimary={() => { void applyToPlayer(ready); }}
         secondaryLabel="Back to My Account"

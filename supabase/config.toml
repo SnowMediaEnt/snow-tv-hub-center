@@ -83,3 +83,10 @@ verify_jwt = false
 # guarded by the x-internal-secret header in code.
 [functions.giveaway-bridge]
 verify_jwt = false
+
+# Customers who signed up through the billing account have a WHMCS account, not
+# a Supabase session, so there is no JWT to verify. Auth is enforced IN CODE:
+# the streaming line is checked against the panel before anything is sent, the
+# email body is composed server-side, and sends are throttled per IP and line.
+[functions.email-line-credentials]
+verify_jwt = false

@@ -56,6 +56,7 @@ const AccountChooser = ({ onBack, onPlayerSignedIn }: AccountChooserProps) => {
   const websiteUser = !!user;
   const [mode, setMode] = useState<'choose' | 'player'>('choose');
   const [focusIndex, setFocusIndex] = useState(1);
+  const [formChildOpen, setFormChildOpen] = useState(false);
 
   // Guard: if this view was unmounted while a sign-in request was in flight,
   // CredentialsForm still persisted the Player sign-in, but we must not
@@ -166,15 +167,21 @@ const AccountChooser = ({ onBack, onPlayerSignedIn }: AccountChooserProps) => {
   if (mode === 'player') {
     return (
       <div className="min-h-screen text-white bg-black/70 relative">
-        <p
-          className="absolute left-0 right-0 z-10 text-center text-brand-ice/80 font-nunito text-sm px-6 pointer-events-none"
-          style={{ top: 'max(env(safe-area-inset-top, 0px), 4vh)' }}
-        >
-          Dreamstreams / Vibez streaming login — this also signs you in to the Player.
-        </p>
+        {/* Hidden while the form shows a full-screen child: this caption is
+            absolutely positioned over the whole branch, so it would otherwise
+            paint on top of the sign-up screen's own header. */}
+        {!formChildOpen && (
+          <p
+            className="absolute left-0 right-0 z-10 text-center text-brand-ice/80 font-nunito text-sm px-6 pointer-events-none"
+            style={{ top: 'max(env(safe-area-inset-top, 0px), 4vh)' }}
+          >
+            Dreamstreams / Vibez streaming login — this also signs you in to the Player.
+          </p>
+        )}
         <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-gold" /></div>}>
           <CredentialsForm
             initial={null}
+            onChildOpenChange={setFormChildOpen}
             onSaved={(_c: XtreamCreds) => { if (mountedRef.current) onPlayerSignedIn(); }}
             onCancel={() => { if (websiteUser) onBack(); else setMode('choose'); }}
           />
