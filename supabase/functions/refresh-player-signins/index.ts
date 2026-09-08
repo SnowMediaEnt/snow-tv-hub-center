@@ -34,7 +34,10 @@ const INTER_REQUEST_DELAY_MS = 300;
 const DIGEST_MAX_LINES = 25;
 const DAY_MS = 86_400_000;
 
-const ALLOWED_HOSTS = new Set(['dstreams.xyz:8080', 'strmz.xyz']);
+// Hosts this unattended job may contact. dstreams is served on :2083 as well
+// as :8080 — the billing API hands back the :2083 form, and without it here
+// every line created through billing was skipped by the reconcile entirely.
+const ALLOWED_HOSTS = new Set(['dstreams.xyz:8080', 'dstreams.xyz:2083', 'strmz.xyz']);
 
 const jsonResponse = (payload: unknown, status = 200): Response =>
   new Response(JSON.stringify(payload), {
@@ -44,8 +47,30 @@ const jsonResponse = (payload: unknown, status = 200): Response =>
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const schemeFor = (host: string): 'http' | 'https' =>
-  host === 'strmz.xyz' ? 'https' : 'http';
+// Ports a panel is commonly served over TLS on. dstreams is handed to us as
+// dstreams.xyz:2083 — asking that over plain http gets the gateway's HTML
+// error page, which is exactly what made a live line read as a wrong password.
+const TLS_PORTS = new Set(['443', '2053', '2083', '2087', '2096', '8443']);
+
+/**
+ * Base URLs to try for a panel, best first.
+ *
+ * A scheme the caller supplied wins: the billing API returns a full
+ * credentials.host and knows better than any guess made here. Without one the
+ * port decides, and a host with no port at all is assumed to be TLS. The other
+ * scheme is kept as a fallback because getting this wrong is SILENT — the
+ * gateway answers with an HTML error page, not a redirect.
+ */
+function panelBases(rawHost: string): string[] {
+  const trimmed = rawHost.trim().replace(/\/+$/, '');
+  const m = /^(https?):\/\/(.+)$/i.exec(trimmed);
+  const bare = (m ? m[2] : trimmed).replace(/\/+$/, '');
+  const port = /:(\d+)$/.exec(bare)?.[1];
+  const first = m ? m[1].toLowerCase() : (port ? (TLS_PORTS.has(port) ? 'https' : 'http') : 'https');
+  const second = first === 'https' ? 'http' : 'https';
+  return [`${first}://${bare}`, `${second}://${bare}`];
+}
+
 
 const parseExpirationDate = (raw: unknown): string | null => {
   if (raw === null || raw === undefined || raw === '' || raw === 'null') return null;
@@ -201,40 +226,41 @@ async function fetchPanel(row: Row): Promise<
   | { kind: 'unreachable' }
 > {
   const host = row.panel_host;
+  // SSRF guard: this job runs unattended over stored rows, so it will only
+  // ever reach hosts we put on the list.
   if (!ALLOWED_HOSTS.has(host)) return { kind: 'unreachable' };
-  const scheme = schemeFor(host);
-  const url =
-    `${scheme}://${host}/player_api.php?username=` +
+  const query =
+    `/player_api.php?username=` +
     encodeURIComponent(row.panel_username) +
     `&password=` +
     encodeURIComponent(row.panel_password);
-
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
   try {
-    for (const ua of PANEL_AGENTS) {
-      const res = await fetch(url, {
-        signal: ctrl.signal,
-        headers: { 'User-Agent': ua, Accept: 'application/json' },
-      });
-      const text = (await res.text()).trim();
-      // Was: an HTML body matching /login|auth|denied|.../ counted as bad
-      // credentials. nginx's own "401 Authorization Required" page matches
-      // that, so a gateway block marked live lines as dead. An HTML page is
-      // never the panel answering — try the next agent instead.
-      if (!text.startsWith('{')) continue;
-      let body: unknown;
-      try { body = JSON.parse(text); } catch { continue; }
-      const info = (body as { user_info?: Record<string, unknown> } | null)?.user_info;
-      if (!info || typeof info !== 'object') continue;
-      if (!truthyAuth((info as Record<string, unknown>).auth)) return { kind: 'auth_failed' };
-      return { kind: 'ok', userInfo: info as Record<string, unknown> };
+    for (const base of panelBases(host)) {
+      for (const ua of PANEL_AGENTS) {
+        let text: string;
+        try {
+          const res = await fetch(base + query, {
+            signal: ctrl.signal,
+            headers: { 'User-Agent': ua, Accept: 'application/json' },
+          });
+          text = (await res.text()).trim();
+        } catch {
+          // Wrong scheme, or an agent the gateway refuses. Try the next pair.
+          continue;
+        }
+        // An HTML page is the gateway talking, never the panel answering.
+        if (!text.startsWith('{')) continue;
+        let data: unknown;
+        try { data = JSON.parse(text); } catch { continue; }
+        const info = (data as { user_info?: Record<string, unknown> } | null)?.user_info;
+        if (!info || typeof info !== 'object') continue;
+        if (!truthyAuth((info as Record<string, unknown>).auth)) return { kind: 'auth_failed' };
+        return { kind: 'ok', userInfo: info as Record<string, unknown> };
+      }
     }
-    console.warn('[refresh-player-signins] panel returned no JSON for any user agent — gateway block?');
-    return { kind: 'unreachable' };
-  } catch (e) {
-    const name = (e as { name?: string } | null)?.name ?? '';
-    if (name === 'AbortError') return { kind: 'unreachable' };
+    console.warn('[refresh-player-signins] no JSON from any scheme or agent — gateway block?');
     return { kind: 'unreachable' };
   } finally {
     clearTimeout(timer);
