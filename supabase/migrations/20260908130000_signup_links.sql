@@ -67,23 +67,33 @@ CREATE TRIGGER update_signup_links_updated_at
 ALTER TABLE public.signup_links REPLICA IDENTITY FULL;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.signup_links;
 
--- Vibez, from the panel automation page list. Prices are deliberately left
--- NULL: set them and the tiers start showing a price, no rebuild needed.
-INSERT INTO public.signup_links (id, service, kind, term_months, connections, url, sort) VALUES
-  ('vibez-trial',    'vibez', 'trial',    NULL, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/trial.php',         0),
-  ('vibez-register', 'vibez', 'register', NULL, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/register.php',      1),
-  ('vibez-login',    'vibez', 'login',    NULL, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/login.php',         2),
-  ('vibez-home',     'vibez', 'home',     NULL, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/index.php',         3),
-  ('vibez-1m-3c',    'vibez', 'plan',        1,    3, 'https://superadminpanels.com/099451/auto/sites/zargoza/onemonth.php',     10),
-  ('vibez-1m-6c',    'vibez', 'plan',        1,    6, 'https://superadminpanels.com/099451/auto/sites/zargoza/onemonth2.php',    11),
-  ('vibez-1m-9c',    'vibez', 'plan',        1,    9, 'https://superadminpanels.com/099451/auto/sites/zargoza/onemonth3.php',    12),
-  ('vibez-3m-3c',    'vibez', 'plan',        3,    3, 'https://superadminpanels.com/099451/auto/sites/zargoza/threemonth.php',   20),
-  ('vibez-3m-6c',    'vibez', 'plan',        3,    6, 'https://superadminpanels.com/099451/auto/sites/zargoza/threemonth2.php',  21),
-  ('vibez-3m-9c',    'vibez', 'plan',        3,    9, 'https://superadminpanels.com/099451/auto/sites/zargoza/threemonth3.php',  22),
-  ('vibez-6m-3c',    'vibez', 'plan',        6,    3, 'https://superadminpanels.com/099451/auto/sites/zargoza/sixmonth.php',     30),
-  ('vibez-6m-6c',    'vibez', 'plan',        6,    6, 'https://superadminpanels.com/099451/auto/sites/zargoza/sixmonth2.php',    31),
-  ('vibez-6m-9c',    'vibez', 'plan',        6,    9, 'https://superadminpanels.com/099451/auto/sites/zargoza/sixmonth3.php',    32),
-  ('vibez-12m-3c',   'vibez', 'plan',       12,    3, 'https://superadminpanels.com/099451/auto/sites/zargoza/twelvemonth.php',  40),
-  ('vibez-12m-6c',   'vibez', 'plan',       12,    6, 'https://superadminpanels.com/099451/auto/sites/zargoza/twelvemonth2.php', 41),
-  ('vibez-12m-9c',   'vibez', 'plan',       12,    9, 'https://superadminpanels.com/099451/auto/sites/zargoza/twelvemonth3.php', 42)
+-- Vibez, matching what the Zaragza packages page actually offers today:
+-- a free 2-day trial and three paid terms, all at 9 connections. The panel
+-- exposes a page for every term x connection combination, so the ones it is
+-- not currently selling are seeded inactive rather than deleted — switch
+-- `active` to true and a tier appears on the TV with no rebuild.
+--
+-- The connection count in each URL follows the panel's own suffix scheme:
+-- no suffix = 3 connections, "2" = 6, "3" = 9.
+INSERT INTO public.signup_links (id, service, kind, label, term_months, connections, price, url, sort, active) VALUES
+  ('vibez-trial',    'vibez', 'trial',    'Free for 2 days', NULL, 5, 0,    'https://superadminpanels.com/099451/auto/sites/zargoza/trial.php',          0, true),
+  ('vibez-register', 'vibez', 'register', NULL,              NULL, NULL, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/register.php',    1, true),
+  ('vibez-login',    'vibez', 'login',    NULL,              NULL, NULL, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/login.php',       2, false),
+  ('vibez-home',     'vibez', 'home',     NULL,              NULL, NULL, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/index.php',       3, false),
+
+  -- On sale now.
+  ('vibez-1m-9c',    'vibez', 'plan', NULL,  1, 9,  35.00, 'https://superadminpanels.com/099451/auto/sites/zargoza/onemonth3.php',    10, true),
+  ('vibez-3m-9c',    'vibez', 'plan', NULL,  3, 9, 100.00, 'https://superadminpanels.com/099451/auto/sites/zargoza/threemonth3.php',  20, true),
+  ('vibez-12m-9c',   'vibez', 'plan', NULL, 12, 9, 375.00, 'https://superadminpanels.com/099451/auto/sites/zargoza/twelvemonth3.php', 40, true),
+
+  -- Available on the panel, not currently sold. Set price and active to list them.
+  ('vibez-1m-3c',    'vibez', 'plan', NULL,  1, 3, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/onemonth.php',     11, false),
+  ('vibez-1m-6c',    'vibez', 'plan', NULL,  1, 6, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/onemonth2.php',    12, false),
+  ('vibez-3m-3c',    'vibez', 'plan', NULL,  3, 3, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/threemonth.php',   21, false),
+  ('vibez-3m-6c',    'vibez', 'plan', NULL,  3, 6, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/threemonth2.php',  22, false),
+  ('vibez-6m-3c',    'vibez', 'plan', NULL,  6, 3, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/sixmonth.php',     30, false),
+  ('vibez-6m-6c',    'vibez', 'plan', NULL,  6, 6, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/sixmonth2.php',    31, false),
+  ('vibez-6m-9c',    'vibez', 'plan', NULL,  6, 9, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/sixmonth3.php',    32, false),
+  ('vibez-12m-3c',   'vibez', 'plan', NULL, 12, 3, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/twelvemonth.php',  41, false),
+  ('vibez-12m-6c',   'vibez', 'plan', NULL, 12, 6, NULL, 'https://superadminpanels.com/099451/auto/sites/zargoza/twelvemonth2.php', 42, false)
 ON CONFLICT (id) DO NOTHING;

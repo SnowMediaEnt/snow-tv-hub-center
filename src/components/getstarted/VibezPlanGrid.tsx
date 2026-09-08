@@ -5,9 +5,9 @@ import { useTVFocus } from '@/hooks/useTVFocus';
 import { BackButton } from '@/components/ui/BackButton';
 import { BODY, HEADER, SCREEN } from '@/components/billing/shared';
 import { focusAttrs, scaleIf, useFocusRecovery } from '@/components/billing/shared';
-import { formatMoney, termLabel } from '@/lib/billing';
+import { formatMoney } from '@/lib/billing';
 import type { SignupLink, SignupOffers } from '@/lib/signupLinks';
-import { linkLabel } from '@/lib/signupLinks';
+import { connectionsText, linkLabel, termText } from '@/lib/signupLinks';
 
 interface Props {
   offers: SignupOffers;
@@ -15,11 +15,20 @@ interface Props {
   onBack: () => void;
 }
 
+/** A price of 0 is an offer, not an amount — say so rather than printing $0.00. */
+const priceText = (l: SignupLink): string | null => {
+  if (l.price === null) return null;
+  return l.price === 0 ? 'Free' : formatMoney(l.price, l.currency);
+};
+
 /**
- * The Vibez tiers, grouped by term. Prices come from public.signup_links and
- * are often NULL — the hosted page is the source of truth for what is actually
- * charged, so an unset price shows the tier without one rather than a number
- * the TV might have wrong.
+ * The Vibez tiers, flat and in the panel's own order.
+ *
+ * Deliberately not grouped by term: the panel currently sells one option per
+ * term, so headings would be one card each. Rows come from
+ * public.signup_links, which is also where prices live — and an unset price
+ * shows the tier without one rather than a number the TV might have wrong,
+ * since the hosted page is what actually charges.
  */
 const VibezPlanGrid = memo(({ offers, onPick, onBack }: Props) => {
   const { containerRef, currentFocusId, focusById } = useTVFocus({
@@ -37,14 +46,6 @@ const VibezPlanGrid = memo(({ offers, onPick, onBack }: Props) => {
     return () => window.clearTimeout(t);
   }, [offers, focusById]);
 
-  const groups = new Map<number, SignupLink[]>();
-  for (const p of offers.plans) {
-    const term = p.termMonths ?? 0;
-    if (!groups.has(term)) groups.set(term, []);
-    groups.get(term)!.push(p);
-  }
-  const ordered = Array.from(groups.entries()).sort((a, b) => (a[0] || 999) - (b[0] || 999));
-
   return (
     <div ref={containerRef} className={SCREEN}>
       <div className={HEADER}>
@@ -60,61 +61,61 @@ const VibezPlanGrid = memo(({ offers, onPick, onBack }: Props) => {
       </div>
 
       <div className={BODY}>
-        <div className="w-full max-w-5xl space-y-8 pb-10">
+        <div className="w-full max-w-5xl space-y-6 pb-10">
           {offers.trial && (
-            <section>
-              <h2 className="text-lg font-quicksand font-semibold text-brand-ice mb-3">Try it first</h2>
-              <Card
-                onClick={() => onPick(offers.trial!)}
-                className={`tv-ring cursor-pointer rounded-2xl p-5 min-h-[6rem] bg-slate-900/70 border border-brand-gold/40 transition-transform duration-150 ease-out ${scaleIf(currentFocusId, 'vp-trial')}`}
-                {...focusAttrs(currentFocusId, 'vp-trial')}
-              >
-                <div className="flex items-center gap-3">
-                  <Sparkles className="w-6 h-6 text-brand-gold shrink-0" />
-                  <div>
-                    <div className="text-xl font-quicksand font-bold text-white leading-tight">Free trial</div>
-                    <div className="text-brand-ice/80 font-nunito text-sm">See how it runs before you pay.</div>
+            <Card
+              onClick={() => onPick(offers.trial!)}
+              className={`tv-ring cursor-pointer rounded-2xl p-6 min-h-[7rem] bg-slate-900/70 border border-brand-gold/50 transition-transform duration-150 ease-out ${scaleIf(currentFocusId, 'vp-trial')}`}
+              {...focusAttrs(currentFocusId, 'vp-trial')}
+            >
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Sparkles className="w-7 h-7 text-brand-gold shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-xl font-quicksand font-bold text-white leading-tight">{linkLabel(offers.trial)}</div>
+                    <div className="text-brand-ice/80 font-nunito text-sm">
+                      Full access{offers.trial.connections ? ` on ${connectionsText(offers.trial.connections)}` : ''}. No card needed.
+                    </div>
                   </div>
                 </div>
-              </Card>
-            </section>
+                <div className="text-2xl font-quicksand font-bold text-brand-gold shrink-0">
+                  {priceText(offers.trial) ?? 'Free'}
+                </div>
+              </div>
+            </Card>
           )}
 
-          {ordered.map(([term, plans]) => (
-            <section key={term}>
-              <h2 className="text-lg font-quicksand font-semibold text-brand-ice mb-3">{termLabel(term)}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {plans.map((p) => {
-                  const id = `vp-${p.id}`;
-                  return (
-                    <Card
-                      key={p.id}
-                      onClick={() => onPick(p)}
-                      className={`tv-ring cursor-pointer rounded-2xl p-5 min-h-[7rem] bg-slate-900/70 border border-white/10 transition-transform duration-150 ease-out ${scaleIf(currentFocusId, id)}`}
-                      {...focusAttrs(currentFocusId, id)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-lg font-quicksand font-bold text-white leading-tight">{linkLabel(p)}</div>
-                          <div className="flex items-center gap-2 text-brand-ice/80 font-nunito text-sm mt-1">
-                            <Users className="w-4 h-4" />
-                            {p.connections ?? '—'} at once
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          {p.price === null ? (
-                            <div className="text-sm text-brand-ice/60 font-nunito">Price on<br />the next screen</div>
-                          ) : (
-                            <div className="text-2xl font-quicksand font-bold text-brand-gold">{formatMoney(p.price, p.currency)}</div>
-                          )}
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+          {offers.plans.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {offers.plans.map((p) => {
+                const id = `vp-${p.id}`;
+                const price = priceText(p);
+                return (
+                  <Card
+                    key={p.id}
+                    onClick={() => onPick(p)}
+                    className={`tv-ring cursor-pointer rounded-2xl p-5 min-h-[8rem] bg-slate-900/70 border border-white/10 transition-transform duration-150 ease-out ${scaleIf(currentFocusId, id)}`}
+                    {...focusAttrs(currentFocusId, id)}
+                  >
+                    <div className="text-xl font-quicksand font-bold text-white leading-tight">
+                      {p.label ?? termText(p.termMonths) ?? 'Plan'}
+                    </div>
+                    <div className="flex items-center gap-2 text-brand-ice/80 font-nunito text-sm mt-1">
+                      <Users className="w-4 h-4" />
+                      {connectionsText(p.connections) || 'Streaming plan'}
+                    </div>
+                    <div className="mt-4">
+                      {price ? (
+                        <span className="text-3xl font-quicksand font-bold text-brand-gold">{price}</span>
+                      ) : (
+                        <span className="text-sm text-brand-ice/60 font-nunito">Price shown on the next screen</span>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
