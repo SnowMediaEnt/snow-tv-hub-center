@@ -275,16 +275,24 @@ export const useTVFocus = ({
         return;
       }
 
-      if (typing && event.key === 'Enter' && managedTarget.dataset.tvAllowEnter === 'true') return;
+      // A field whose keyboard shows Next means the field below, even when the
+      // field is marked allow-enter so Enter can submit a form. Password on the
+      // create-account form is both: it carries allow-enter for the sign-in
+      // layout, where it is the last field, but in register mode the keyboard
+      // says Next and First name is below it. Enter fell straight through to
+      // the form, which submitted half-filled and answered "enter a first name".
+      const enterField = isTextInput(active) ? active : (isTextInput(target) ? target : null);
+      const wantsNext = enterField?.getAttribute('enterkeyhint') === 'next';
+      if (typing && event.key === 'Enter' && managedTarget.dataset.tvAllowEnter === 'true' && !wantsNext) return;
 
       // The keyboard's own Next / Done key arrives as Enter. Next means the
       // field below — not "open this field again", which is what activate()
       // did, and why Next appeared to do nothing at all. With no field below,
       // this is Done and the keyboard simply closes.
-      if (imeOpenRef.current && event.key === 'Enter' && isTextInput(active ?? target)) {
+      if (event.key === 'Enter' && enterField && (imeOpenRef.current || wantsNext)) {
         event.preventDefault();
         event.stopPropagation();
-        const from = active ?? target;
+        const from = enterField;
         imeOpenRef.current = false;
         imeElRef.current = null;
         suppressIme(from);
