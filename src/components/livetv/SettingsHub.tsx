@@ -1,10 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Tv, KeyRound, Users, Palette, LogOut, Loader2 } from 'lucide-react';
+import { ArrowLeft, Tv, KeyRound, Users, Palette, LogOut, Loader2, CreditCard } from 'lucide-react';
 import type { XtreamCreds } from '@/lib/xtream';
 import { useToast } from '@/hooks/use-toast';
 import { isDemo } from '@/lib/demoMode';
 import { BackButton, BACK_ROW } from '@/components/ui/BackButton';
+import { useBillingEnabled } from '@/hooks/useBillingEnabled';
 
 // Demo latch (?demo=1) — account actions are inert; the demo account is fixed.
 const DEMO = isDemo();
@@ -12,6 +13,8 @@ const DEMO = isDemo();
 const AccountInfoScreen = lazy(() => import('./AccountInfoScreen'));
 const SwitchAccountScreen = lazy(() => import('./SwitchAccountScreen'));
 const AppearanceScreen = lazy(() => import('./AppearanceScreen'));
+// Billing account (plans, renew, trial) — behind the billing_account flag.
+const BillingAccountScreen = lazy(() => import('@/components/billing/BillingAccountScreen'));
 
 interface Props {
   onBack: () => void;
@@ -20,8 +23,8 @@ interface Props {
   onSwitchAccount: (c: XtreamCreds) => void;
 }
 
-type View = 'menu' | 'account' | 'switch' | 'appearance';
-type MenuId = 'account' | 'switch' | 'appearance' | 'signout';
+type View = 'menu' | 'billing' | 'account' | 'switch' | 'appearance';
+type MenuId = 'billing' | 'account' | 'switch' | 'appearance' | 'signout';
 
 interface MenuItem { id: MenuId; label: string; icon: typeof Tv; }
 
@@ -37,12 +40,16 @@ const SettingsHub = memo(({ onBack, onSignOut, onChangeCredentials, onSwitchAcco
   const menuIdxRef = useRef(menuIdx);
   useEffect(() => { menuIdxRef.current = menuIdx; }, [menuIdx]);
 
+  const billingOn = useBillingEnabled();
   const MENU: MenuItem[] = useMemo(() => [
+    // "My Account" = the billing account (plans, renewals, trial). Account
+    // Info below stays the panel line's details.
+    ...(billingOn ? [{ id: 'billing' as MenuId, label: 'My Account', icon: CreditCard }] : []),
     { id: 'account',    label: 'Account Info',      icon: KeyRound },
     { id: 'switch',     label: 'Switch Account',    icon: Users },
     { id: 'appearance', label: 'Appearance',        icon: Palette },
     { id: 'signout',    label: 'Sign Out',          icon: LogOut },
-  ], []);
+  ], [billingOn]);
 
   const { toast } = useToast();
   const demoNote = useCallback(() => {
@@ -56,7 +63,8 @@ const SettingsHub = memo(({ onBack, onSignOut, onChangeCredentials, onSwitchAcco
     // Demo: Account Info / Switch Account / Sign Out are
     // inert — the demo account is pre-loaded. Appearance stays fully functional.
     if (DEMO && id !== 'appearance') { demoNote(); return; }
-    if (id === 'account') setView('account');
+    if (id === 'billing') setView('billing');
+    else if (id === 'account') setView('account');
     else if (id === 'switch') setView('switch');
     else if (id === 'appearance') setView('appearance');
     else if (id === 'signout') onSignOut();
@@ -92,6 +100,16 @@ const SettingsHub = memo(({ onBack, onSignOut, onChangeCredentials, onSwitchAcco
     return () => window.removeEventListener('keydown', handler, true);
   }, [view, MENU, onBack, activate]);
 
+  if (view === 'billing') {
+    return (
+      <Suspense fallback={fallback}>
+        <BillingAccountScreen
+          onBack={() => setView('menu')}
+          onUseInPlayer={onSwitchAccount}
+        />
+      </Suspense>
+    );
+  }
   if (view === 'account') {
     return (
       <Suspense fallback={fallback}>

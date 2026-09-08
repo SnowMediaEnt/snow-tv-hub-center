@@ -1,8 +1,8 @@
-import { memo, useMemo, useState } from 'react';
+import { lazy, memo, Suspense, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tv, Loader2 } from 'lucide-react';
+import { Tv, Loader2, Sparkles } from 'lucide-react';
 import {
   authenticateRouted,
   pickServerForUsername,
@@ -22,6 +22,12 @@ import { capturePlayerSignin } from '@/lib/playerSigninCapture';
 import { tryPlayerBridge } from '@/lib/playerLogin';
 import { trackEvent } from '@/lib/analytics';
 import { useToast } from '@/hooks/use-toast';
+import { useBillingEnabled } from '@/hooks/useBillingEnabled';
+import { SmcBilling } from '@/capacitor/SmcBilling';
+
+// The free-trial flow (billing account → POST /trial → sign the player in).
+// Loaded only when the viewer presses the button.
+const TrialFlow = lazy(() => import('@/components/billing/TrialFlow'));
 
 interface Props {
   initial?: Partial<XtreamCreds> | null;
@@ -37,6 +43,27 @@ const CredentialsForm = memo(({ initial, onSaved, onCancel }: Props) => {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // ── Free 24-hour trial (billing account) ───────────────────────────────
+  // Behind the billing_account flag and only in a build with the plugin.
+  // Hidden once the billing account says trial_used, per the API contract.
+  const billingOn = useBillingEnabled();
+  const [trialOpen, setTrialOpen] = useState(false);
+  const [trialHidden, setTrialHidden] = useState(false);
+  const showTrial = billingOn && !trialHidden;
+  useEffect(() => {
+    if (!billingOn) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const st = await SmcBilling.getState();
+        if (cancelled || !st.signedIn) return;
+        const me = await SmcBilling.me();
+        if (!cancelled && me.client.trial_used) setTrialHidden(true);
+      } catch { /* unknown → keep the button; the flow itself handles trial_already_used */ }
+    })();
+    return () => { cancelled = true; };
+  }, [billingOn]);
+
   // ── D-pad focus (TV remote) ────────────────────────────────────────────
   // This form must own its own D-pad navigation. Without it the WebView's
   // native spatial navigation decides where focus lands on mount, which put
@@ -45,16 +72,25 @@ const CredentialsForm = memo(({ initial, onSaved, onCancel }: Props) => {
   const navigation = useMemo<TVFocusNavigationMap>(() => ({
     'cf-user':   { down: 'cf-pass' },
     'cf-pass':   { up: 'cf-user', down: 'cf-submit' },
-    'cf-submit': { up: 'cf-pass', right: hasCancel ? 'cf-cancel' : undefined },
-    'cf-cancel': { up: 'cf-pass', left: 'cf-submit' },
-  }), [hasCancel]);
+    'cf-submit': { up: 'cf-pass', right: hasCancel ? 'cf-cancel' : undefined, down: showTrial ? 'cf-trial' : undefined },
+    'cf-cancel': { up: 'cf-pass', left: 'cf-submit', down: showTrial ? 'cf-trial' : undefined },
+    'cf-trial':  { up: 'cf-submit', left: null, right: null, down: null },
+  }), [hasCancel, showTrial]);
 
-  const { containerRef } = useTVFocus({
+  const { containerRef, focusById } = useTVFocus({
+    enabled: !trialOpen,
     navigation,
     initialFocusId: 'cf-user',
     onBack: () => onCancel?.(),
     scrollBlock: 'center',
   });
+  // Coming back from the trial flow re-renders the form without re-running
+  // the hook's one-time auto-focus, so put the cursor back ourselves.
+  useEffect(() => {
+    if (trialOpen) return;
+    const raf = requestAnimationFrame(() => focusById('cf-user'));
+    return () => cancelAnimationFrame(raf);
+  }, [trialOpen, focusById]);
 
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -138,6 +174,21 @@ const CredentialsForm = memo(({ initial, onSaved, onCancel }: Props) => {
     }
   };
 
+  if (trialOpen) {
+    return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-gold" /></div>}>
+        <TrialFlow
+          onDone={(c) => {
+            setTrialOpen(false);
+            toast({ title: 'Connected', description: `Signed in to ${c.serverLabel || 'Dreamstreams'}.` });
+            onSaved(c);
+          }}
+          onCancel={() => setTrialOpen(false)}
+        />
+      </Suspense>
+    );
+  }
+
   return (
     <div ref={containerRef} className="min-h-screen flex items-center justify-center px-6 py-12">
       <form
@@ -218,6 +269,20 @@ const CredentialsForm = memo(({ initial, onSaved, onCancel }: Props) => {
             </Button>
           )}
         </div>
+
+        {showTrial && (
+          <Button
+            type="button"
+            variant="white"
+            onClick={() => setTrialOpen(true)}
+            data-tv-focus-id="cf-trial"
+            disabled={testing}
+            className="w-full mt-3 rounded-xl h-12 transition-transform duration-150 ease-out"
+          >
+            <Sparkles className="w-4 h-4 mr-2 text-brand-gold" />
+            New here? Start a free 24-hour trial
+          </Button>
+        )}
 
         <p className="text-brand-ice/60 text-xs font-nunito mt-4">
           Email usernames connect to Vibez; all other usernames connect to Dreamstreams.

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,10 +22,14 @@ import { usePlayerAccount } from '@/hooks/usePlayerAccount';
 import PlayerAccountCard from '@/components/PlayerAccountCard';
 import ClaimAccountCard, { type ClaimCloseOutcome } from '@/components/livetv/ClaimAccountCard';
 import { claimDoneKey, isClaimDone } from '@/lib/accountClaim';
+import { useBillingEnabled } from '@/hooks/useBillingEnabled';
+
+// Billing account (plans, renewals, trial). Behind the billing_account flag.
+const BillingAccountScreen = lazy(() => import('@/components/billing/BillingAccountScreen'));
 
 
 interface UserDashboardProps {
-  onViewChange: (view: 'home' | 'apps' | 'media' | 'news' | 'support' | 'chat' | 'settings' | 'user' | 'community' | 'credits' | 'games' | 'account-signin') => void;
+  onViewChange: (view: 'home' | 'apps' | 'media' | 'news' | 'support' | 'chat' | 'settings' | 'user' | 'community' | 'credits' | 'games' | 'account-signin' | 'livetv') => void;
   onManageMedia: () => void;
   onViewSettings: () => void;
   onCommunityChat: () => void;
@@ -37,10 +41,14 @@ interface UserDashboardProps {
 const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunityChat, onCreditStore, onGames, onGiveaway }: UserDashboardProps) => {
   const { enabled: giveawayEnabled } = useFeatureFlag('giveaway_enabled', false);
   const giveawayOn = giveawayEnabled && !isDemo();
+  // Billing account section (plans / renew / trial) — flag + native plugin.
+  const billingOn = useBillingEnabled();
+  const [billingOpen, setBillingOpen] = useState(false);
   // Focus indices shift by one when the Giveaway action button is visible.
   const TAB_BASE = giveawayOn ? 6 : 5;
   const CLAIM_IDX = TAB_BASE + 2;
-  const EDIT_IDX = CLAIM_IDX + 1;
+  const BILLING_IDX = CLAIM_IDX + 1;
+  const EDIT_IDX = billingOn ? BILLING_IDX + 1 : CLAIM_IDX + 1;
   const DELETE_IDX = EDIT_IDX + 1;
   const { user, signOut, loading: authLoading } = useAuth();
   const { profile, transactions, loading } = useUserProfile();
@@ -71,8 +79,9 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
   // Player Account section + a "Website account" card; every website-only
   // section (gems, tabs, services editor, Danger Zone, Sign Out) is hidden.
   // Guest focus slots: 0 back, 1 player action (Sign in with DS/Vibez when no
-  // player account, else Link email while a claim is available), 2 website
-  // "Sign in", 3 website "Create free account".
+  // player account, else Link email while a claim is available), 2 billing
+  // account (when the flag is on), 3 website "Sign in", 4 website "Create
+  // free account".
   const guestMode = !user;
   const guestPlayerSlot = !playerAccount || claimAvailable;
   const navigate = useNavigate();
@@ -108,27 +117,31 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
   // Android TV/Firestick navigation
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // The claim card owns the D-pad while it is open.
-      if (claimOpen) return;
+      // The claim card / billing screen owns the D-pad while it is open.
+      if (claimOpen || billingOpen) return;
       if (guestMode) {
         // A modal (auto-update prompt, welcome popup, dialogs) owns the keyboard.
         if (document.querySelector('[data-autoupdate-dialog="true"], [aria-modal="true"]')) return;
         if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key)) return;
         event.preventDefault();
+        const belowBack = guestPlayerSlot ? 1 : billingOn ? 2 : 3;
+        const aboveWebsite = billingOn ? 2 : guestPlayerSlot ? 1 : 0;
         switch (event.key) {
           case 'ArrowDown':
-            if (focusedElement === 0) setFocusedElement(guestPlayerSlot ? 1 : 2);
-            else if (focusedElement === 1) setFocusedElement(2);
+            if (focusedElement === 0) setFocusedElement(belowBack);
+            else if (focusedElement === 1) setFocusedElement(billingOn ? 2 : 3);
+            else if (focusedElement === 2) setFocusedElement(3);
             break;
           case 'ArrowUp':
             if (focusedElement === 1) setFocusedElement(0);
-            else if (focusedElement === 2 || focusedElement === 3) setFocusedElement(guestPlayerSlot ? 1 : 0);
+            else if (focusedElement === 2) setFocusedElement(guestPlayerSlot ? 1 : 0);
+            else if (focusedElement === 3 || focusedElement === 4) setFocusedElement(aboveWebsite);
             break;
           case 'ArrowRight':
-            if (focusedElement === 2) setFocusedElement(3);
+            if (focusedElement === 3) setFocusedElement(4);
             break;
           case 'ArrowLeft':
-            if (focusedElement === 3) setFocusedElement(2);
+            if (focusedElement === 4) setFocusedElement(3);
             break;
           case 'Enter':
           case ' ':
@@ -137,7 +150,8 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
               if (!playerAccount) onViewChange('account-signin');
               else if (claimAvailable) setClaimOpen(true);
             }
-            else if (focusedElement === 2 || focusedElement === 3) navigate('/auth');
+            else if (focusedElement === 2) setBillingOpen(true);
+            else if (focusedElement === 3 || focusedElement === 4) navigate('/auth');
             break;
         }
         return;
@@ -178,8 +192,10 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
             }
           } else if (focusedElement === CLAIM_IDX) {
             setFocusedElement(TAB_BASE); // player account -> overview tab
+          } else if (billingOn && focusedElement === BILLING_IDX) {
+            setFocusedElement(playerActionAvailable ? CLAIM_IDX : TAB_BASE); // billing -> player action / overview tab
           } else if (focusedElement === EDIT_IDX) {
-            setFocusedElement(playerActionAvailable ? CLAIM_IDX : TAB_BASE); // edit -> player action / overview tab
+            setFocusedElement(billingOn ? BILLING_IDX : playerActionAvailable ? CLAIM_IDX : TAB_BASE); // edit -> billing / player action / overview tab
           } else if (focusedElement === DELETE_IDX) {
             setFocusedElement(EDIT_IDX); // delete -> edit
           }
@@ -191,14 +207,16 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
             setFocusedElement(TAB_BASE); // action buttons -> first tab
           } else if (focusedElement >= TAB_BASE && focusedElement <= TAB_BASE + 1) {
             if (activeTab === 'overview') {
-              setFocusedElement(playerActionAvailable ? CLAIM_IDX : EDIT_IDX); // tabs -> player action / edit button
+              setFocusedElement(playerActionAvailable ? CLAIM_IDX : billingOn ? BILLING_IDX : EDIT_IDX); // tabs -> player action / billing / edit button
             } else {
               const container = dashboardScrollRef.current;
               if (container) container.scrollBy({ top: 300, behavior: 'smooth' });
               else window.scrollBy({ top: 300, behavior: 'smooth' });
             }
           } else if (focusedElement === CLAIM_IDX) {
-            setFocusedElement(EDIT_IDX); // player account -> edit
+            setFocusedElement(billingOn ? BILLING_IDX : EDIT_IDX); // player account -> billing / edit
+          } else if (billingOn && focusedElement === BILLING_IDX) {
+            setFocusedElement(EDIT_IDX); // billing -> edit
           } else if (focusedElement === EDIT_IDX) {
             setFocusedElement(DELETE_IDX); // edit -> delete
           } else if (focusedElement === DELETE_IDX) {
@@ -221,6 +239,7 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
             if (!playerAccount && !isDemo()) onViewChange('account-signin');
             else if (claimAvailable) setClaimOpen(true);
           }
+          else if (billingOn && focusedElement === BILLING_IDX) setBillingOpen(true);
           else if (focusedElement === EDIT_IDX) setShowServicesEditor(true);
           else if (focusedElement === DELETE_IDX) setShowDeleteConfirm(true);
           break;
@@ -230,7 +249,7 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedElement, activeTab, onViewChange, onCreditStore, onCommunityChat, onGames, onGiveaway, giveawayOn, TAB_BASE, CLAIM_IDX, EDIT_IDX, DELETE_IDX, claimAvailable, claimOpen, playerActionAvailable, guestMode, guestPlayerSlot, playerAccount, navigate]);
+  }, [focusedElement, activeTab, onViewChange, onCreditStore, onCommunityChat, onGames, onGiveaway, giveawayOn, TAB_BASE, CLAIM_IDX, BILLING_IDX, EDIT_IDX, DELETE_IDX, claimAvailable, claimOpen, billingOn, billingOpen, playerActionAvailable, guestMode, guestPlayerSlot, playerAccount, navigate]);
 
   // When the active tab changes (after initial mount), scroll the tab strip
   // into view. Skipping the first run keeps the dashboard scrolled to the top
@@ -297,6 +316,25 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
       onViewChange('home');
     }
   };
+
+  // The billing account screen replaces the dashboard while open. It owns the
+  // D-pad (the keydown effect above bails on billingOpen) and the hardware
+  // Back (useOwnHardwareBack inside it); Back returns here.
+  if (billingOpen) {
+    return (
+      <Suspense fallback={
+        <div className="tv-safe min-h-dvh bg-neutral-900 text-white flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400"></div>
+        </div>
+      }>
+        <BillingAccountScreen
+          ownsHardwareBack
+          onBack={() => setBillingOpen(false)}
+          onUseInPlayer={() => { setBillingOpen(false); onViewChange('livetv'); }}
+        />
+      </Suspense>
+    );
+  }
 
   if (loading || authLoading || playerLoading) {
     return (
@@ -374,6 +412,27 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
             )}
           </Card>
 
+          {/* Billing account — Dreamstreams plans, renewals and the free trial */}
+          {billingOn && (
+            <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 rounded-2xl p-6 mb-6">
+              <h2 className="text-2xl font-bold text-white mb-1">Billing &amp; subscription</h2>
+              <p className="text-slate-400 text-sm mb-4">
+                See your Dreamstreams plan, renew, buy a plan, redeem a gift code, or link a billing account to this device.
+              </p>
+              <Button
+                variant="gold"
+                size="lg"
+                data-focused={focusedElement === 2 ? 'true' : 'false'}
+                data-dash-focus={focusedElement === 2 ? 'true' : 'false'}
+                onClick={() => setBillingOpen(true)}
+                className={`tv-ring tv-ring-contrast min-h-12 rounded-xl transition-transform duration-150 ease-out ${guestRing(2)}`}
+              >
+                <CreditCard className="w-5 h-5 mr-2" />
+                {playerAccount ? 'Link a billing account' : 'Open billing account'}
+              </Button>
+            </Card>
+          )}
+
           {/* Website account — optional Snow Media WEBSITE account (Supabase) */}
           <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 rounded-2xl p-6">
             <h2 className="text-2xl font-bold text-white mb-1">Website account</h2>
@@ -385,10 +444,10 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
               <Button
                 variant="gold"
                 size="lg"
-                data-focused={focusedElement === 2 ? 'true' : 'false'}
-                data-dash-focus={focusedElement === 2 ? 'true' : 'false'}
+                data-focused={focusedElement === 3 ? 'true' : 'false'}
+                data-dash-focus={focusedElement === 3 ? 'true' : 'false'}
                 onClick={() => navigate('/auth')}
-                className={`tv-ring tv-ring-contrast min-h-12 rounded-xl transition-transform duration-150 ease-out ${guestRing(2)}`}
+                className={`tv-ring tv-ring-contrast min-h-12 rounded-xl transition-transform duration-150 ease-out ${guestRing(3)}`}
               >
                 <LogIn className="w-5 h-5 mr-2" />
                 Sign in
@@ -396,10 +455,10 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
               <Button
                 variant="white"
                 size="lg"
-                data-focused={focusedElement === 3 ? 'true' : 'false'}
-                data-dash-focus={focusedElement === 3 ? 'true' : 'false'}
+                data-focused={focusedElement === 4 ? 'true' : 'false'}
+                data-dash-focus={focusedElement === 4 ? 'true' : 'false'}
                 onClick={() => navigate('/auth')}
-                className={`tv-ring min-h-12 rounded-xl transition-transform duration-150 ease-out ${guestRing(3)}`}
+                className={`tv-ring min-h-12 rounded-xl transition-transform duration-150 ease-out ${guestRing(4)}`}
               >
                 <UserPlus className="w-5 h-5 mr-2" />
                 Create free account
@@ -637,6 +696,28 @@ const UserDashboard = ({ onViewChange, onManageMedia, onViewSettings, onCommunit
                   </div>
                 )}
               </div>
+
+              {/* Billing account — Dreamstreams plans, renewals, trial */}
+              {billingOn && (
+                <div className="mt-8 pt-6 border-t border-slate-700" data-dash-focus={focusedElement === BILLING_IDX ? 'true' : 'false'}>
+                  <h3 className="text-xl font-semibold text-white mb-2">Billing &amp; subscription</h3>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Your Dreamstreams plan: renew, buy a plan, redeem a gift code, or link a billing account to this device.
+                  </p>
+                  <Button
+                    variant="gold"
+                    size="lg"
+                    onClick={() => setBillingOpen(true)}
+                    data-focused={focusedElement === BILLING_IDX ? 'true' : 'false'}
+                    className={`tv-ring tv-ring-contrast min-h-12 rounded-xl transition-transform duration-150 ease-out ${
+                      focusedElement === BILLING_IDX ? 'scale-105 z-10' : ''
+                    }`}
+                  >
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    {playerAccount ? 'Link a billing account' : 'Open billing account'}
+                  </Button>
+                </div>
+              )}
 
               {/* My Devices & Services */}
               <div className="mt-8 pt-6 border-t border-slate-700" data-dash-focus={focusedElement === EDIT_IDX ? 'true' : 'false'}>
