@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Trash2, RefreshCw, Package, FileWarning, Download } from 'lucide-react';
@@ -57,11 +57,24 @@ const ApkCacheViewer = () => {
     refresh();
   }, [refresh]);
 
+  // Re-home focus after a row the viewer was standing on disappears (a delete,
+  // or a refresh that shortens the list) — and ONLY then.
+  //
+  // This used to fire on mount as well, with no record of whether focus had
+  // ever been in here. Opening Settings -> Updates mounts this component, so it
+  // snatched focus off the tab row and dropped it on Refresh before the viewer
+  // had chosen anything. Down is what enters this list; Settings does that
+  // explicitly.
+  const hadFocusRef = useRef(false);
   useEffect(() => {
     if (cacheBusy) return;
-    const active = document.activeElement as HTMLElement | null;
     const root = document.querySelector('[data-apk-cache-root]');
-    if (!root || (active && root.contains(active) && !active.hasAttribute('disabled'))) return;
+    const active = document.activeElement as HTMLElement | null;
+    if (root && active && root.contains(active) && !active.hasAttribute('disabled')) {
+      hadFocusRef.current = true;
+      return;
+    }
+    if (!root || !hadFocusRef.current) return;
 
     requestAnimationFrame(() => {
       const first = document.querySelector<HTMLElement>('[data-apk-cache-first]');
