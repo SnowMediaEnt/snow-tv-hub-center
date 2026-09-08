@@ -36,6 +36,11 @@ const MAX_PER_LINE = 3;  // one send, plus a couple of "it didn't arrive" retrie
 // shared sandbox address, which only delivers to the Resend account owner.
 const FROM = Deno.env.get('EMAIL_FROM') || 'Snow Media <onboarding@resend.dev>';
 
+// The From is a no-reply on a sending subdomain, so point replies at a mailbox
+// that is actually read. A customer whose login does not work will hit Reply
+// before they find the support page.
+const REPLY_TO = Deno.env.get('EMAIL_REPLY_TO') || 'support@snowmediaent.com';
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -197,6 +202,7 @@ Deno.serve(async (req) => {
     const { error } = await resend.emails.send({
       from: FROM,
       to: [email],
+      replyTo: REPLY_TO,
       subject: `Your ${serverLabel} login details`,
       html: buildHtml({ username, password, host, serverLabel, planName, expiresAt }),
     });

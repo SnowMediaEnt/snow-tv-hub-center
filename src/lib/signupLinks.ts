@@ -34,7 +34,7 @@ export const VIBEZ_HOST: string =
   SERVERS.find((s) => s.label === 'Vibez')?.host ?? 'https://strmz.xyz';
 
 /**
- * Known-good links as of the last time the panel account was checked.
+ * The panel's live packages as of the last check, used as a floor.
  *
  * This is a floor, not a duplicate source of truth: the table wins whenever it
  * has rows. It exists so a cold cache, an offline first launch or a failed
@@ -43,25 +43,11 @@ export const VIBEZ_HOST: string =
  */
 const FALLBACK_BASE = 'https://superadminpanels.com/099451/auto/sites/zargoza';
 const FALLBACK: SignupLink[] = [
-  { id: 'vibez-trial', service: VIBEZ, kind: 'trial', label: null, termMonths: null, connections: null, price: null, currency: 'USD', url: `${FALLBACK_BASE}/trial.php`, sort: 0 },
+  { id: 'vibez-trial', service: VIBEZ, kind: 'trial', label: 'Free for 2 days', termMonths: null, connections: 5, price: 0, currency: 'USD', url: `${FALLBACK_BASE}/trial.php`, sort: 0 },
   { id: 'vibez-register', service: VIBEZ, kind: 'register', label: null, termMonths: null, connections: null, price: null, currency: 'USD', url: `${FALLBACK_BASE}/register.php`, sort: 1 },
-  ...([
-    [1, 3, 'onemonth.php', 10], [1, 6, 'onemonth2.php', 11], [1, 9, 'onemonth3.php', 12],
-    [3, 3, 'threemonth.php', 20], [3, 6, 'threemonth2.php', 21], [3, 9, 'threemonth3.php', 22],
-    [6, 3, 'sixmonth.php', 30], [6, 6, 'sixmonth2.php', 31], [6, 9, 'sixmonth3.php', 32],
-    [12, 3, 'twelvemonth.php', 40], [12, 6, 'twelvemonth2.php', 41], [12, 9, 'twelvemonth3.php', 42],
-  ] as Array<[number, number, string, number]>).map(([term, conn, page, sort]) => ({
-    id: `vibez-${term}m-${conn}c`,
-    service: VIBEZ,
-    kind: 'plan' as SignupKind,
-    label: null,
-    termMonths: term,
-    connections: conn,
-    price: null,
-    currency: 'USD',
-    url: `${FALLBACK_BASE}/${page}`,
-    sort,
-  })),
+  { id: 'vibez-1m-9c', service: VIBEZ, kind: 'plan', label: null, termMonths: 1, connections: 9, price: 35, currency: 'USD', url: `${FALLBACK_BASE}/onemonth3.php`, sort: 10 },
+  { id: 'vibez-3m-9c', service: VIBEZ, kind: 'plan', label: null, termMonths: 3, connections: 9, price: 100, currency: 'USD', url: `${FALLBACK_BASE}/threemonth3.php`, sort: 20 },
+  { id: 'vibez-12m-9c', service: VIBEZ, kind: 'plan', label: null, termMonths: 12, connections: 9, price: 375, currency: 'USD', url: `${FALLBACK_BASE}/twelvemonth3.php`, sort: 40 },
 ];
 
 interface Row {
@@ -124,9 +110,20 @@ export function toOffers(links: SignupLink[]): SignupOffers {
 }
 
 /** "3 months · 6 connections", or the row's own label when the operator set one. */
+/** "1 month", "3 months", "1 year" — how the panel itself words each term. */
+export function termText(months: number | null): string {
+  if (!months) return '';
+  if (months === 12) return '1 year';
+  return months === 1 ? '1 month' : `${months} months`;
+}
+
+export function connectionsText(n: number | null): string {
+  if (!n) return '';
+  return n === 1 ? '1 connection' : `${n} connections`;
+}
+
+/** A one-line name for a tier, e.g. "1 year · 9 connections". */
 export function linkLabel(l: SignupLink): string {
   if (l.label) return l.label;
-  const term = l.termMonths ? (l.termMonths === 1 ? '1 month' : `${l.termMonths} months`) : null;
-  const conn = l.connections ? (l.connections === 1 ? '1 connection' : `${l.connections} connections`) : null;
-  return [term, conn].filter(Boolean).join(' · ') || 'Plan';
+  return [termText(l.termMonths), connectionsText(l.connections)].filter(Boolean).join(' · ') || 'Plan';
 }

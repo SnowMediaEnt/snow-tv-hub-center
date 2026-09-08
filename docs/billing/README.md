@@ -49,3 +49,25 @@ Run the unit tests with `./gradlew :app:testDebugUnitTest` from `android/`.
   or shown as a QR code on Fire TV, and never stored. "Open again" mints a new one.
 - Only the pending `invoice_id` is persisted, so a restart resumes polling.
 - GETs retry once on a network failure; POSTs never retry.
+
+## Emailing the login
+
+The Account API sends no email of any kind, so after a trial or purchase the
+username and password exist only on the TV screen. `email-line-credentials`
+mails a copy. It verifies the line against the panel before sending, composes
+the body server-side (so it is not an open relay — the caller supplies only
+the address), and throttles per line and per IP.
+
+Two Supabase edge-function secrets control the sender:
+
+| Secret | Default | Notes |
+|---|---|---|
+| `EMAIL_FROM` | `Snow Media <onboarding@resend.dev>` | The default is Resend's shared sandbox sender and **only delivers to the Resend account owner** — customers get nothing, silently. Set it to an address on a domain verified in Resend, e.g. `Snow Media <noreply@support.snowmediaent.com>`. |
+| `EMAIL_REPLY_TO` | `support@snowmediaent.com` | Where replies go, since the From is a no-reply. |
+
+A domain verified in Resend authorises that exact domain only: verifying
+`support.snowmediaent.com` allows `anything@support.snowmediaent.com` but not
+`support@snowmediaent.com`.
+
+Note that `send-custom-email` still hardcodes the sandbox sender, so its
+welcome and verification mail has the same delivery limit.
