@@ -95,8 +95,14 @@ const CredentialsForm = memo(({ initial, onSaved, onCancel, onChildOpenChange }:
   // the username field, which on a TV would also raise the on-screen keyboard
   // and read as the app resetting itself.
   const openedFromRef = useRef<string>('cf-user');
+  // Only on the way BACK. Without this guard it also ran on mount, landing a
+  // second focus call on the username field on top of the hook's own — one
+  // more thing raising the keyboard on a screen the viewer only just opened.
+  const wasChildOpenRef = useRef(false);
   useEffect(() => {
-    if (childOpen) return;
+    if (childOpen) { wasChildOpenRef.current = true; return; }
+    if (!wasChildOpenRef.current) return;
+    wasChildOpenRef.current = false;
     const raf = requestAnimationFrame(() => focusById(openedFromRef.current));
     return () => cancelAnimationFrame(raf);
   }, [childOpen, focusById]);
