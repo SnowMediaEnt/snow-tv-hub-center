@@ -50,6 +50,27 @@ if (!hasReleaseKeystore) {
         "################################################################\n")
 }
 
+// BILLING ACCOUNT (docs/billing/API.md).
+// The app key is a shared secret that is rotated before every release. It is
+// read from android/local.properties (gitignored) or a Gradle property, never
+// from a source file:
+//
+//   SMC_BILLING_APP_KEY=...
+//   SMC_BILLING_BASE_URL=https://billing.smcdreamstreams.store/smc/v1   (optional)
+//
+// With no key the app still builds; the billing screens then report
+// "not configured" and stay hidden behind the billing_account feature flag.
+def localPropsFile = rootProject.file("local.properties")
+def localProps = new Properties()
+if (localPropsFile.exists()) {
+    localPropsFile.withInputStream { localProps.load(it) }
+}
+def billingAppKey = localProps['SMC_BILLING_APP_KEY'] ?: project.findProperty('SMC_BILLING_APP_KEY') ?: System.getenv('SMC_BILLING_APP_KEY') ?: ''
+def billingBaseUrl = localProps['SMC_BILLING_BASE_URL'] ?: project.findProperty('SMC_BILLING_BASE_URL') ?: 'https://billing.smcdreamstreams.store/smc/v1'
+if (!billingAppKey) {
+    logger.warn("\n#  SMC_BILLING_APP_KEY is not set in android/local.properties — billing account features will be disabled in this build.\n")
+}
+
 
 android {
     namespace "com.snowmedia"
@@ -60,6 +81,10 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 29
         versionName "1.7"
+
+        // Never hardcode the key in Kotlin; see the block above.
+        buildConfigField "String", "SMC_BILLING_APP_KEY", "\"${billingAppKey}\""
+        buildConfigField "String", "SMC_BILLING_BASE_URL", "\"${billingBaseUrl}\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
@@ -99,6 +124,18 @@ android {
     dexOptions {
         javaMaxHeapSize "2g"
     }
+
+    buildFeatures {
+        // AGP 8 no longer generates BuildConfig by default; the billing key lives there.
+        buildConfig true
+    }
+
+    testOptions {
+        unitTests.all {
+            // Fail loudly instead of hanging when a test waits on MockWebServer.
+            testLogging { events "failed"; exceptionFormat "full" }
+        }
+    }
 }
 
 repositories {
@@ -121,7 +158,15 @@ dependencies {
     // Background alert poll (see com.snowmedia.notify.AlertPollWorker).
     implementation "androidx.work:work-runtime-ktx:2.9.1"
     implementation project(':capacitor-android')
+    // Billing account: HTTP client and the encrypted token store
+    // (com.snowmedia.billing). OkHttp is plain JVM so the API client and the
+    // polling loop run under unit tests against MockWebServer.
+    implementation "com.squareup.okhttp3:okhttp:4.12.0"
+    implementation "androidx.security:security-crypto:1.1.0-alpha06"
     testImplementation "junit:junit:$junitVersion"
+    testImplementation "com.squareup.okhttp3:mockwebserver:4.12.0"
+    // A real org.json for JVM unit tests; android.jar's copy is stubs that throw.
+    testImplementation "org.json:json:20240303"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
