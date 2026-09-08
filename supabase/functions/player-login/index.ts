@@ -45,6 +45,23 @@ const normalizeHost = (raw: unknown): string | null => {
   return h;
 };
 
+// Panels commonly sit behind an nginx rule that rejects anything that does not
+// look like a media player, answering 401 with an HTML page. Judged by status
+// alone that is indistinguishable from a wrong password, so a working line was
+// reported as bad credentials. Ask with agents a panel expects, and decide
+// from the BODY: only JSON carrying user_info can say a login is wrong.
+// Ordered most-likely-first. The Dalvik agent is what the app's own native
+// HTTP sends today, and the app reaches this panel fine — so it is the one
+// with direct evidence behind it. The rest cover the usual gateway allowlists.
+// Only the failure path costs extra requests: the first agent that gets a JSON
+// answer wins and the loop stops.
+const PANEL_AGENTS = [
+  'Dalvik/2.1.0 (Linux; U; Android 9; AFTMM Build/PS7233)',
+  'Mozilla/5.0 (Linux; Android 9; AFTMM Build/PS7233; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/70.0.3538.110 Mobile Safari/537.36',
+  'VLC/3.0.20 LibVLC/3.0.20',
+  'okhttp/4.12.0',
+];
+
 async function verifyLine(host: string, username: string, password: string): Promise<
   { kind: 'ok'; userInfo: Record<string, unknown> } | { kind: 'auth_failed' } | { kind: 'unreachable' }
 > {
@@ -54,19 +71,24 @@ async function verifyLine(host: string, username: string, password: string): Pro
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: { 'User-Agent': 'SnowMediaHub/1.0 (+player-login)' },
-    });
-    if (res.status === 401 || res.status === 403) return { kind: 'auth_failed' };
-    if (!res.ok) return { kind: 'unreachable' };
-    let data: unknown;
-    try { data = await res.json(); } catch { return { kind: 'unreachable' }; }
-    const ui = (data as { user_info?: Record<string, unknown> })?.user_info;
-    const auth = ui?.auth;
-    const authed = auth === 1 || auth === '1' || auth === true;
-    if (!authed) return { kind: 'auth_failed' };
-    return { kind: 'ok', userInfo: ui ?? {} };
+    for (const ua of PANEL_AGENTS) {
+      const res = await fetch(url, {
+        signal: ctrl.signal,
+        headers: { 'User-Agent': ua, Accept: 'application/json' },
+      });
+      const text = (await res.text()).trim();
+      // An HTML page is the gateway talking, not the panel — try the next agent.
+      if (!text.startsWith('{')) continue;
+      let data: unknown;
+      try { data = JSON.parse(text); } catch { continue; }
+      const ui = (data as { user_info?: Record<string, unknown> })?.user_info;
+      if (!ui) continue;
+      const auth = ui.auth;
+      const authed = auth === 1 || auth === '1' || auth === true;
+      return authed ? { kind: 'ok', userInfo: ui } : { kind: 'auth_failed' };
+    }
+    console.warn('[player-login] panel returned no JSON for any user agent — gateway block?');
+    return { kind: 'unreachable' };
   } catch {
     return { kind: 'unreachable' };
   } finally {
