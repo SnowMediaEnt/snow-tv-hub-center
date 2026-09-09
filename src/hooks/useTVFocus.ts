@@ -82,6 +82,12 @@ export const useTVFocus = ({
   // so opening the keyboard re-entered focusById and shut it again before it
   // could appear. This is the one element it must leave alone.
   const imeElRef = useRef<HTMLElement | null>(null);
+  // One press of the remote's Back can reach us twice: the WebView delivers the
+  // real key (keyCode 4), and LiveTV's Capacitor backButton listener
+  // synthesizes an Escape on top of it. Handled separately that is two Backs —
+  // the first closed the keyboard and the second left the screen, so there was
+  // never a moment to arrow down to Sign In.
+  const lastBackRef = useRef(0);
   const [currentFocusId, setCurrentFocusId] = useState<string | null>(initialFocusId ?? null);
 
 
@@ -242,7 +248,12 @@ export const useTVFocus = ({
         imeOpenRef.current = false;
         imeElRef.current = null;
         suppressIme(el);
-        void hideKeyboardForDpad(el).then(() => focusById(currentIdRef.current, 'nearest'));
+        // Blur and leave focus off the field. The ring is drawn from
+        // data-tv-focused, which focusById already set, and the handler below
+        // falls back to currentIdRef when focus is loose — so navigation still
+        // works. Re-focusing the input here risked the WebView raising the
+        // keyboard again on the spot.
+        void hideKeyboardForDpad(el);
       };
       const isBack = event.key === 'Escape' || event.key === 'Backspace' || event.keyCode === 4 || event.code === 'GoBack';
       if (isBack) {
@@ -250,6 +261,12 @@ export const useTVFocus = ({
         if (event.key === 'Backspace' && imeOpenRef.current) return;
         event.preventDefault();
         event.stopPropagation();
+        const now = Date.now();
+        // Swallow the echo of a press we already acted on.
+        if (now - lastBackRef.current < 400) return;
+        lastBackRef.current = now;
+        // Tell the app's other Back listeners this press is spoken for.
+        (window as unknown as { __overlayHandledBackAt?: number }).__overlayHandledBackAt = now;
         if (imeOpenRef.current) {
           closeIme(active ?? target);
           return;
